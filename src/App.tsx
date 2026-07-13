@@ -1,6 +1,8 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { AppProvider } from './contexts/AppContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout';
+import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Projects from './pages/Projects';
 import Vendors from './pages/Vendors';
@@ -11,7 +13,10 @@ import Budgeting from './pages/Budgeting';
 import Payments from './pages/Payments';
 import Reports from './pages/Reports';
 
-export default function App() {
+/** Auth gate: unauthenticated users only ever see the login screen. */
+function Shell() {
+  const { user } = useAuth();
+  if (!user) return <Login />;
   return (
     <AppProvider>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
@@ -31,5 +36,13 @@ export default function App() {
         </Routes>
       </BrowserRouter>
     </AppProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <Shell />
+    </AuthProvider>
   );
 }

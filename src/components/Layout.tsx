@@ -7,6 +7,7 @@ import {
   HardHat,
   IndianRupee,
   LayoutDashboard,
+  LogOut,
   Menu,
   RotateCcw,
   Users,
@@ -15,9 +16,10 @@ import {
   WifiOff,
   X,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { useApp } from '../contexts/AppContext';
+import { useAuth } from '../contexts/AuthContext';
 
 const NAV = [
   { name: 'Dashboard', path: '/', icon: LayoutDashboard },
@@ -41,7 +43,23 @@ const MORE_TABS = NAV.filter(
 export default function Layout() {
   const { isOnline, isSyncing, pendingCount, simulateOffline, setSimulateOffline, resetData } =
     useApp();
+  const { user, logout } = useAuth();
   const [moreOpen, setMoreOpen] = useState(false);
+  const [userMenu, setUserMenu] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!userMenu) return;
+    const onClick = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) setUserMenu(false);
+    };
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, [userMenu]);
+
+  const initials = user
+    ? user.name.split(' ').map((w) => w[0]).join('').slice(0, 2)
+    : '';
 
   const syncLabel = isSyncing
     ? `⏳ Syncing (${pendingCount})`
@@ -80,6 +98,42 @@ export default function Layout() {
               {isOnline ? <Wifi size={14} aria-hidden="true" /> : <WifiOff size={14} aria-hidden="true" />}
               {isOnline ? 'Online' : 'Offline'}
             </button>
+
+            {user && (
+              <div className="relative" ref={userMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setUserMenu((s) => !s)}
+                  aria-haspopup="menu"
+                  aria-expanded={userMenu}
+                  aria-label={`Account menu for ${user.name}`}
+                  className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-ink text-xs font-bold text-amber-glow shadow-raise transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+                >
+                  {initials}
+                </button>
+                {userMenu && (
+                  <div
+                    role="menu"
+                    className="absolute right-0 top-11 z-50 w-56 animate-pop-in overflow-hidden rounded-2xl bg-white shadow-lift ring-1 ring-ink/10"
+                  >
+                    <div className="border-b border-ink/10 px-4 py-3">
+                      <p className="text-sm font-bold text-ink">{user.name}</p>
+                      <p className="text-xs text-ink/50">{user.role}</p>
+                      <p className="num mt-0.5 truncate text-[11px] text-ink/40">{user.email}</p>
+                    </div>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={logout}
+                      className="flex w-full cursor-pointer items-center gap-2.5 px-4 py-3 text-sm font-semibold text-ink/75 transition-colors hover:bg-paper-soft hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-amber-500"
+                    >
+                      <LogOut size={16} aria-hidden="true" />
+                      Sign out
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
         {!isOnline && (

@@ -107,6 +107,26 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Login blueprint scene ambient motion */
+.anim-float { animation: float-y 6s ease-in-out infinite; }
+.anim-float-slow { animation: float-y 9s ease-in-out infinite; }
+.anim-hook { animation: hook-sway 5s ease-in-out infinite; transform-origin: top center; }
+.anim-window-a { animation: flicker 4s ease-in-out infinite; }
+.anim-window-b { animation: flicker 4s ease-in-out infinite 1.6s; }
+@keyframes float-y {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+@keyframes hook-sway {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(10px); }
+}
+@keyframes flicker {
+  0%, 100% { opacity: 0.85; }
+  45% { opacity: 0.85; }
+  55% { opacity: 0.3; }
+}
+
 /* Animated progress fill */
 .fill-animate {
   transform-origin: left;
