@@ -5,10 +5,10 @@ export default {
     extend: {
       colors: {
         ink: {
-          DEFAULT: '#10151F',
-          800: '#1A2230',
-          700: '#242E40',
-          600: '#33405A',
+          DEFAULT: '#2A3242',
+          800: '#333C4E',
+          700: '#40495D',
+          600: '#525E76',
         },
         paper: {
           DEFAULT: '#F4F2EC',
@@ -24,8 +24,8 @@ export default {
         mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
       },
       boxShadow: {
-        raise: '0 1px 2px rgba(16,21,31,0.06), 0 8px 24px -12px rgba(16,21,31,0.25)',
-        lift: '0 2px 4px rgba(16,21,31,0.08), 0 20px 44px -16px rgba(16,21,31,0.35)',
+        raise: '0 1px 2px rgba(42,50,66,0.06), 0 8px 24px -12px rgba(42,50,66,0.22)',
+        lift: '0 2px 4px rgba(42,50,66,0.08), 0 20px 44px -16px rgba(42,50,66,0.30)',
         glow: '0 4px 20px -4px rgba(255,176,32,0.55)',
       },
       keyframes: {

@@ -1,10 +1,10 @@
 import { useState, type FormEvent } from 'react';
-import { ArrowRight, Eye, EyeOff, HardHat, Wifi } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Eye, EyeOff, HardHat, Wifi } from 'lucide-react';
 import { DEMO_ACCOUNTS, DEMO_PASSWORD, useAuth } from '../contexts/AuthContext';
 import { inputCls } from '../components/ui';
 
 /** Hand-authored blueprint site scene — no external assets. */
-function SiteScene() {
+export function SiteScene() {
   return (
     <svg viewBox="0 0 900 600" preserveAspectRatio="xMidYMid slice" aria-hidden="true" className="h-full w-full">
       <defs>
@@ -70,7 +70,7 @@ function SiteScene() {
   );
 }
 
-export default function Login() {
+export default function Login({ onBack }: { onBack?: () => void }) {
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -103,6 +103,15 @@ export default function Login() {
       {/* Left — the form */}
       <div className="flex flex-col justify-center px-6 py-10 sm:px-12 lg:px-16">
         <div className="mx-auto w-full max-w-sm animate-fade-up">
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              className="mb-6 flex cursor-pointer items-center gap-1.5 text-sm font-semibold text-ink/50 transition-colors hover:text-ink focus:outline-none focus:ring-2 focus:ring-amber-500"
+            >
+              <ArrowLeft size={15} aria-hidden="true" /> Back to home
+            </button>
+          )}
           <div className="mb-8 flex items-center gap-2.5">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-ink text-amber-glow shadow-raise">
               <HardHat size={22} aria-hidden="true" />

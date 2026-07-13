@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { AppProvider } from './contexts/AppContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout';
+import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Projects from './pages/Projects';
@@ -13,10 +15,17 @@ import Budgeting from './pages/Budgeting';
 import Payments from './pages/Payments';
 import Reports from './pages/Reports';
 
-/** Auth gate: unauthenticated users only ever see the login screen. */
+/** Public entry: a marketing landing page that leads into the login screen. */
+function PublicShell() {
+  const [view, setView] = useState<'landing' | 'login'>('landing');
+  if (view === 'login') return <Login onBack={() => setView('landing')} />;
+  return <Landing onEnter={() => setView('login')} />;
+}
+
+/** Auth gate: unauthenticated users see the landing/login flow. */
 function Shell() {
   const { user } = useAuth();
-  if (!user) return <Login />;
+  if (!user) return <PublicShell />;
   return (
     <AppProvider>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
