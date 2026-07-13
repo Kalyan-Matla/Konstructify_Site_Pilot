@@ -91,7 +91,7 @@ export default function Dashboard() {
           plain={String(activeProjects)}
           sub={overrunProjects > 0 ? `${overrunProjects} over budget` : 'all on budget'}
           subTone={overrunProjects > 0 ? 'text-red-600' : 'text-emerald-700'}
-          dark
+          accent
         />
         <StatCard
           label="Payables <30 days"
@@ -274,33 +274,31 @@ function StatCard({
   plain,
   sub,
   subTone,
-  dark,
+  accent,
 }: {
   label: string;
   rupees: number | null;
   plain?: string;
   sub: string;
   subTone: string;
-  dark?: boolean;
+  accent?: boolean;
 }) {
   const tiltRef = useTilt(6);
   const animated = useCountUp(rupees ?? 0);
   return (
-    <div
-      ref={tiltRef}
-      className={clsx(
-        'tilt panel p-4 sm:p-5',
-        dark && 'blueprint border-transparent text-white',
+    <div ref={tiltRef} className="tilt panel relative overflow-hidden p-4 sm:p-5">
+      {accent && (
+        <span
+          aria-hidden="true"
+          className="absolute left-0 top-0 h-full w-1 bg-amber-glow"
+        />
       )}
-    >
       <div className="tilt-inner">
-        <p className={clsx('text-[11px] font-bold uppercase tracking-wider', dark ? 'text-white/50' : 'text-ink/45')}>
-          {label}
-        </p>
-        <p className={clsx('num mt-1.5 text-2xl font-bold sm:text-3xl', dark ? 'text-amber-glow' : 'text-ink')}>
+        <p className="text-[11px] font-bold uppercase tracking-wider text-ink/45">{label}</p>
+        <p className="num mt-1.5 text-2xl font-bold text-ink sm:text-3xl">
           {rupees !== null ? formatINR(Math.round(animated)) : plain}
         </p>
-        <p className={clsx('mt-1 text-xs font-semibold', dark ? 'text-white/60' : subTone)}>{sub}</p>
+        <p className={clsx('mt-1 text-xs font-semibold', subTone)}>{sub}</p>
       </div>
     </div>
   );

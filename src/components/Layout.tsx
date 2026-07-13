@@ -144,10 +144,11 @@ export default function Layout() {
       </header>
 
       <div className="mx-auto flex max-w-7xl">
-        {/* Desktop sidebar — dark blueprint shell */}
+        {/* Desktop sidebar — light premium surface; dark is reserved for
+            intentional accents (active pill, buttons, hero bands). */}
         <nav
           aria-label="Main navigation"
-          className="blueprint no-print my-5 ml-4 hidden w-60 shrink-0 self-start rounded-3xl shadow-lift md:block"
+          className="no-print my-5 ml-4 hidden w-60 shrink-0 self-start rounded-3xl border border-ink/10 bg-white shadow-raise md:block"
         >
           <ul className="sticky top-20 space-y-0.5 p-3">
             {NAV.map((item) => (
@@ -159,8 +160,8 @@ export default function Layout() {
                     clsx(
                       'group relative flex items-center gap-3 overflow-hidden rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-500',
                       isActive
-                        ? 'bg-white/10 text-amber-glow'
-                        : 'text-white/60 hover:bg-white/5 hover:text-white',
+                        ? 'bg-ink/[0.055] text-ink'
+                        : 'text-ink/55 hover:bg-paper-soft hover:text-ink',
                     )
                   }
                 >
@@ -169,13 +170,16 @@ export default function Layout() {
                       {isActive && (
                         <span
                           aria-hidden="true"
-                          className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-amber-glow shadow-glow"
+                          className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-amber-glow"
                         />
                       )}
                       <item.icon
                         size={18}
                         aria-hidden="true"
-                        className="transition-transform duration-200 group-hover:-translate-y-0.5"
+                        className={clsx(
+                          'transition-transform duration-200 group-hover:-translate-y-0.5',
+                          isActive && 'text-amber-600',
+                        )}
                       />
                       {item.name}
                     </>
@@ -183,11 +187,11 @@ export default function Layout() {
                 </NavLink>
               </li>
             ))}
-            <li className="pt-3">
+            <li className="mt-2 border-t border-ink/10 pt-3">
               <button
                 type="button"
                 onClick={resetData}
-                className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-white/40 transition-colors hover:bg-white/5 hover:text-white/70 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-ink/40 transition-colors hover:bg-paper-soft hover:text-ink/70 focus:outline-none focus:ring-2 focus:ring-amber-500"
               >
                 <RotateCcw size={18} aria-hidden="true" />
                 Reset demo data

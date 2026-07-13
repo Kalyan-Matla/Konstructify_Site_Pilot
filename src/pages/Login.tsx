@@ -9,45 +9,45 @@ export function SiteScene() {
     <svg viewBox="0 0 900 600" preserveAspectRatio="xMidYMid slice" aria-hidden="true" className="h-full w-full">
       <defs>
         <linearGradient id="tower" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#1A2230" />
-          <stop offset="1" stopColor="#10151F" />
+          <stop offset="0" stopColor="#292524" />
+          <stop offset="1" stopColor="#1C1917" />
         </linearGradient>
       </defs>
       {/* drifting moon + specks */}
-      <circle cx="720" cy="96" r="30" fill="#FFB020" opacity="0.28" className="anim-float-slow" />
-      <circle cx="160" cy="130" r="3" fill="#FFB020" opacity="0.5" className="anim-float" />
+      <circle cx="720" cy="96" r="30" fill="#E0A22B" opacity="0.28" className="anim-float-slow" />
+      <circle cx="160" cy="130" r="3" fill="#E0A22B" opacity="0.5" className="anim-float" />
       <circle cx="300" cy="80" r="2" fill="#ffffff" opacity="0.35" className="anim-float-slow" />
       <circle cx="600" cy="150" r="2.5" fill="#ffffff" opacity="0.3" className="anim-float" />
 
       {/* tower crane */}
-      <g stroke="#FFB020" strokeWidth="3" fill="none" opacity="0.9">
+      <g stroke="#E0A22B" strokeWidth="3" fill="none" opacity="0.9">
         <path d="M200 590 V200 M182 590 V200 M182 250 h18 M182 320 h18 M182 390 h18 M182 460 h18 M182 530 h18
                  M182 200 l18 35 M200 250 l-18 35 M182 320 l18 35 M200 390 l-18 35 M182 460 l18 35" />
         <path d="M70 200 H470 M70 200 l112 -36 M470 200 l-288 -36 M182 164 v36" />
         <path d="M380 200 v80" />
       </g>
-      <rect x="368" y="280" width="24" height="22" rx="3" fill="#FFB020" opacity="0.85" className="anim-hook" />
-      <rect x="72" y="220" width="34" height="24" rx="3" fill="#33405A" />
+      <rect x="368" y="280" width="24" height="22" rx="3" fill="#E0A22B" opacity="0.85" className="anim-hook" />
+      <rect x="72" y="220" width="34" height="24" rx="3" fill="#57534E" />
 
       {/* building under construction */}
       <g>
         <rect x="270" y="360" width="200" height="240" fill="url(#tower)" />
-        <g stroke="#33405A" strokeWidth="3">
+        <g stroke="#57534E" strokeWidth="3">
           <path d="M270 420 h200 M270 480 h200 M270 540 h200" />
           <path d="M320 360 v240 M370 360 v240 M420 360 v240" />
         </g>
-        <g fill="#FFB020">
+        <g fill="#E0A22B">
           <rect x="278" y="428" width="30" height="14" rx="2" opacity="0.85" className="anim-window-a" />
           <rect x="378" y="488" width="30" height="14" rx="2" opacity="0.6" className="anim-window-b" />
           <rect x="328" y="548" width="30" height="14" rx="2" opacity="0.8" className="anim-window-a" />
         </g>
-        <path d="M270 360 h200" stroke="#FFB020" strokeWidth="3" opacity="0.7" />
+        <path d="M270 360 h200" stroke="#E0A22B" strokeWidth="3" opacity="0.7" />
       </g>
 
       {/* finished tower with lit windows */}
       <g>
         <rect x="530" y="270" width="160" height="330" fill="url(#tower)" />
-        <g fill="#FFB020">
+        <g fill="#E0A22B">
           {Array.from({ length: 6 }, (_, r) =>
             Array.from({ length: 4 }, (_, c) => (
               <rect

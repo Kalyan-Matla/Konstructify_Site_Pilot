@@ -4,18 +4,22 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Warm "stone" neutral ramp — brown undertone harmonizes with the
+        // ivory paper and bronze-gold accent (premium black + gold system).
         ink: {
-          DEFAULT: '#2A3242',
-          800: '#333C4E',
-          700: '#40495D',
-          600: '#525E76',
+          DEFAULT: '#1C1917',
+          800: '#292524',
+          700: '#44403C',
+          600: '#57534E',
         },
         paper: {
-          DEFAULT: '#F4F2EC',
-          soft: '#FBFAF6',
+          DEFAULT: '#F6F4EF',
+          soft: '#FCFBF8',
         },
+        // Two-tone gold: `glow` is the bright accent for dark surfaces &
+        // buttons; deeper bronze lives in Tailwind's amber-700/800 for text.
         amber: {
-          glow: '#FFB020',
+          glow: '#E0A22B',
         },
       },
       fontFamily: {
@@ -24,9 +28,9 @@ export default {
         mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
       },
       boxShadow: {
-        raise: '0 1px 2px rgba(42,50,66,0.06), 0 8px 24px -12px rgba(42,50,66,0.22)',
-        lift: '0 2px 4px rgba(42,50,66,0.08), 0 20px 44px -16px rgba(42,50,66,0.30)',
-        glow: '0 4px 20px -4px rgba(255,176,32,0.55)',
+        raise: '0 1px 2px rgba(28,25,23,0.05), 0 6px 20px -10px rgba(28,25,23,0.18)',
+        lift: '0 2px 4px rgba(28,25,23,0.07), 0 18px 40px -16px rgba(28,25,23,0.26)',
+        glow: '0 4px 18px -5px rgba(224,162,43,0.5)',
       },
       keyframes: {
         'fade-up': {
