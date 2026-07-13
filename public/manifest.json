@@ -1,0 +1,10 @@
+{
+  "name": "Konstructify",
+  "short_name": "Konstructify",
+  "description": "Construction management for Indian SME contractors",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f9fafb",
+  "theme_color": "#1d4ed8",
+  "icons": []
+}

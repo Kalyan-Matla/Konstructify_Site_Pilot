@@ -1,0 +1,35 @@
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { AppProvider } from './contexts/AppContext';
+import Layout from './components/Layout';
+import Dashboard from './pages/Dashboard';
+import Projects from './pages/Projects';
+import Vendors from './pages/Vendors';
+import Credits from './pages/Credits';
+import WorkStatus from './pages/WorkStatus';
+import WorkOrders from './pages/WorkOrders';
+import Budgeting from './pages/Budgeting';
+import Payments from './pages/Payments';
+import Reports from './pages/Reports';
+
+export default function App() {
+  return (
+    <AppProvider>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <Routes>
+          <Route element={<Layout />}>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/projects" element={<Projects />} />
+            <Route path="/vendors" element={<Vendors />} />
+            <Route path="/credits" element={<Credits />} />
+            <Route path="/work-status" element={<WorkStatus />} />
+            <Route path="/work-orders" element={<WorkOrders />} />
+            <Route path="/budgeting" element={<Budgeting />} />
+            <Route path="/payments" element={<Payments />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="*" element={<Dashboard />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </AppProvider>
+  );
+}

@@ -1,0 +1,250 @@
+import { useState, type FormEvent } from 'react';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
+import type { BudgetItem } from '../types';
+import { useApp } from '../contexts/AppContext';
+import {
+  AICard,
+  Badge,
+  ConfirmDialog,
+  EmptyState,
+  Field,
+  Modal,
+  PageHeader,
+  SyncBadge,
+  inputCls,
+} from '../components/ui';
+import { suggestBudget } from '../utils/ai-suggestions';
+import { formatINR, uid } from '../utils/format';
+
+const UNITS = ['LS', 'm³', 'sqft', 'MT', 'bags', 'pcs', 'days'];
+
+export default function Budgeting() {
+  const { state, upsert, remove } = useApp();
+  const [projectId, setProjectId] = useState(state.projects[0]?.id ?? '');
+  const [editing, setEditing] = useState<BudgetItem | 'new' | null>(null);
+  const [deleting, setDeleting] = useState<BudgetItem | null>(null);
+  const [aiDismissed, setAiDismissed] = useState(false);
+
+  const project = state.projects.find((p) => p.id === projectId);
+  const items = state.budgetItems.filter((b) => b.projectId === projectId);
+  const totalEstimate = items.reduce((s, b) => s + b.quantity * b.unitRate, 0);
+  const totalActual = items.reduce((s, b) => s + b.actualSpend, 0);
+  const totalVariance = totalActual - totalEstimate;
+  const ai = suggestBudget(projectId, state.budgetItems);
+
+  return (
+    <div>
+      <PageHeader
+        title="Budgeting"
+        subtitle="BOQ estimates vs. actual spend"
+        action={
+          <button
+            type="button"
+            onClick={() => setEditing('new')}
+            className="flex items-center gap-1.5 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          >
+            <Plus size={16} aria-hidden="true" /> New BOQ item
+          </button>
+        }
+      />
+
+      <div className="mb-4">
+        <label htmlFor="bq-project" className="mr-2 text-sm text-gray-600">Project</label>
+        <select
+          id="bq-project"
+          className="rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          value={projectId}
+          onChange={(e) => setProjectId(e.target.value)}
+        >
+          {state.projects.map((p) => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="mb-4 grid grid-cols-3 gap-3">
+        <Summary label="BOQ estimate" value={formatINR(totalEstimate)} />
+        <Summary label="Actual spend" value={formatINR(totalActual)} />
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Variance</p>
+          <p className={`mt-1 text-lg font-bold sm:text-xl ${totalVariance > 0 ? 'text-red-600' : 'text-green-700'}`}>
+            {totalVariance > 0 ? '+' : ''}{formatINR(totalVariance)}
+          </p>
+        </div>
+      </div>
+
+      {ai && !aiDismissed && <AICard suggestion={ai} onDismiss={() => setAiDismissed(true)} />}
+
+      {items.length === 0 ? (
+        <EmptyState message={`No BOQ items for ${project?.name ?? 'this project'} yet.`} />
+      ) : (
+        <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+          <table className="w-full min-w-[680px] text-sm">
+            <thead>
+              <tr className="border-b border-gray-200 text-left text-xs uppercase tracking-wide text-gray-500">
+                <th scope="col" className="px-3 py-2">Item</th>
+                <th scope="col" className="px-3 py-2">Qty</th>
+                <th scope="col" className="px-3 py-2">Rate</th>
+                <th scope="col" className="px-3 py-2">Estimate</th>
+                <th scope="col" className="px-3 py-2">Actual</th>
+                <th scope="col" className="px-3 py-2">Variance</th>
+                <th scope="col" className="px-3 py-2"><span className="sr-only">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((b) => {
+                const estimate = b.quantity * b.unitRate;
+                const variance = b.actualSpend - estimate;
+                const pct = estimate > 0 ? (variance / estimate) * 100 : 0;
+                const overrun = estimate > 0 && variance > 0.1 * estimate;
+                return (
+                  <tr key={b.id} className="border-b border-gray-100 last:border-0">
+                    <td className="px-3 py-2">
+                      <p className="font-medium text-gray-900">{b.description}</p>
+                      <SyncBadge entity="budgetItem" id={b.id} />
+                    </td>
+                    <td className="px-3 py-2 text-gray-600">{b.quantity} {b.unit}</td>
+                    <td className="px-3 py-2 text-gray-600">₹{b.unitRate.toLocaleString('en-IN')}</td>
+                    <td className="px-3 py-2 text-gray-900">{formatINR(estimate)}</td>
+                    <td className="px-3 py-2 text-gray-900">{formatINR(b.actualSpend)}</td>
+                    <td className="px-3 py-2">
+                      {b.actualSpend === 0 ? (
+                        <Badge tone="gray">not started</Badge>
+                      ) : overrun ? (
+                        <Badge tone="red">+{pct.toFixed(0)}% overrun</Badge>
+                      ) : variance > 0 ? (
+                        <Badge tone="yellow">+{pct.toFixed(0)}%</Badge>
+                      ) : (
+                        <Badge tone="green">{pct.toFixed(0)}%</Badge>
+                      )}
+                    </td>
+                    <td className="px-3 py-2">
+                      <div className="flex gap-1">
+                        <button type="button" onClick={() => setEditing(b)} aria-label={`Edit ${b.description}`} className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                          <Pencil size={15} />
+                        </button>
+                        <button type="button" onClick={() => setDeleting(b)} aria-label={`Delete ${b.description}`} className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {editing && (
+        <BudgetForm
+          item={editing === 'new' ? null : editing}
+          projectId={projectId}
+          onClose={() => setEditing(null)}
+          onSave={(b) => {
+            upsert('budgetItem', b, `BOQ item "${b.description}" ${editing === 'new' ? 'created' : 'updated'}`);
+            setEditing(null);
+          }}
+        />
+      )}
+      {deleting && (
+        <ConfirmDialog
+          title="Delete BOQ item?"
+          message={`"${deleting.description}" will be removed from the BOQ.`}
+          confirmLabel="Delete"
+          onCancel={() => setDeleting(null)}
+          onConfirm={() => {
+            remove('budgetItem', deleting.id, `BOQ item "${deleting.description}" deleted`);
+            setDeleting(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function Summary({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white p-4">
+      <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{label}</p>
+      <p className="mt-1 text-lg font-bold text-gray-900 sm:text-xl">{value}</p>
+    </div>
+  );
+}
+
+function BudgetForm({
+  item,
+  projectId,
+  onClose,
+  onSave,
+}: {
+  item: BudgetItem | null;
+  projectId: string;
+  onClose: () => void;
+  onSave: (b: BudgetItem) => void;
+}) {
+  const [description, setDescription] = useState(item?.description ?? '');
+  const [quantity, setQuantity] = useState(item ? String(item.quantity) : '1');
+  const [unit, setUnit] = useState(item?.unit ?? 'LS');
+  const [unitRate, setUnitRate] = useState(item ? String(item.unitRate) : '');
+  const [actualSpend, setActualSpend] = useState(item ? String(item.actualSpend) : '0');
+  const [error, setError] = useState('');
+
+  const qty = Number(quantity) || 0;
+  const rate = Number(unitRate) || 0;
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    if (!description.trim()) return setError('Description is required.');
+    if (qty <= 0 || rate <= 0) return setError('Quantity and rate must be greater than 0.');
+    onSave({
+      id: item?.id ?? uid('b'),
+      projectId: item?.projectId ?? projectId,
+      description: description.trim(),
+      quantity: qty,
+      unit,
+      unitRate: rate,
+      actualSpend: Math.max(Number(actualSpend) || 0, 0),
+    });
+  };
+
+  return (
+    <Modal title={item ? 'Edit BOQ item' : 'New BOQ item'} onClose={onClose}>
+      <form onSubmit={submit} noValidate>
+        {error && <p role="alert" className="mb-3 rounded bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+        <Field label="Item description" htmlFor="bq-desc" required>
+          <input id="bq-desc" className={inputCls} value={description} onChange={(e) => setDescription(e.target.value)} required />
+        </Field>
+        <div className="grid grid-cols-2 gap-x-3">
+          <Field label="Quantity" htmlFor="bq-qty" required>
+            <input id="bq-qty" type="number" min="0.1" step="any" className={inputCls} value={quantity} onChange={(e) => setQuantity(e.target.value)} required />
+          </Field>
+          <Field label="Unit" htmlFor="bq-unit">
+            <select id="bq-unit" className={inputCls} value={unit} onChange={(e) => setUnit(e.target.value)}>
+              {UNITS.map((u) => (
+                <option key={u} value={u}>{u}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Unit rate (₹)" htmlFor="bq-rate" required>
+            <input id="bq-rate" type="number" min="1" className={inputCls} value={unitRate} onChange={(e) => setUnitRate(e.target.value)} required />
+          </Field>
+          <Field label="Actual spend so far (₹)" htmlFor="bq-actual">
+            <input id="bq-actual" type="number" min="0" className={inputCls} value={actualSpend} onChange={(e) => setActualSpend(e.target.value)} />
+          </Field>
+        </div>
+        <p className="mb-2 text-sm text-gray-600">
+          Total estimate: <strong>{formatINR(qty * rate)}</strong>
+        </p>
+        <div className="mt-2 flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            Cancel
+          </button>
+          <button type="submit" className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+            Save item
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
