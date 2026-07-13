@@ -67,7 +67,7 @@ export default function Vendors() {
           <button
             type="button"
             onClick={() => setEditing('new')}
-            className="flex items-center gap-1.5 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            className="btn-primary flex items-center gap-1.5"
           >
             <Plus size={16} aria-hidden="true" /> Add vendor
           </button>
@@ -76,7 +76,7 @@ export default function Vendors() {
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <label htmlFor="vf-cat" className="text-sm text-gray-600">Category</label>
-        <select id="vf-cat" className="rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" value={category} onChange={(e) => setCategory(e.target.value as CategoryFilter)}>
+        <select id="vf-cat" className="rounded-xl border border-ink/15 bg-white px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" value={category} onChange={(e) => setCategory(e.target.value as CategoryFilter)}>
           <option value="all">All</option>
           <option value="material">Material</option>
           <option value="service">Service</option>
@@ -84,7 +84,7 @@ export default function Vendors() {
           <option value="equipment">Equipment</option>
         </select>
         <label htmlFor="vf-health" className="ml-2 text-sm text-gray-600">Credit</label>
-        <select id="vf-health" className="rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" value={health} onChange={(e) => setHealth(e.target.value as HealthFilter)}>
+        <select id="vf-health" className="rounded-xl border border-ink/15 bg-white px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" value={health} onChange={(e) => setHealth(e.target.value as HealthFilter)}>
           <option value="all">All</option>
           <option value="healthy">Healthy (&lt;50%)</option>
           <option value="warning">50–80%</option>
@@ -96,19 +96,19 @@ export default function Vendors() {
       {vendors.length === 0 ? (
         <EmptyState message="No vendors match. Adjust filters or add a vendor." />
       ) : (
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div className="stagger grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {vendors.map((v) => {
             const used = creditUsed(v.id, state.invoices);
             const pct = creditUsagePercent(v, state.invoices) * 100;
             const h = creditHealth(v, state.invoices);
             const overdue = vendorHasOverdue(v.id, state.invoices);
             return (
-              <div key={v.id} className="rounded-lg border border-gray-200 bg-white p-4">
+              <div key={v.id} className="panel panel-hover p-4">
                 <div className="flex items-start justify-between gap-2">
                   <button
                     type="button"
                     onClick={() => setViewing(v)}
-                    className="text-left text-base font-semibold text-gray-900 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="text-left text-base font-semibold text-gray-900 hover:text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
                   >
                     {v.name}
                   </button>
@@ -130,7 +130,7 @@ export default function Vendors() {
                     <a
                       href={`tel:${v.phone}`}
                       aria-label={`Call ${v.name}`}
-                      className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-green-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-green-700 focus:outline-none focus:ring-2 focus:ring-amber-500"
                     >
                       <Phone size={16} />
                     </a>
@@ -138,7 +138,7 @@ export default function Vendors() {
                       type="button"
                       onClick={() => setEditing(v)}
                       aria-label={`Edit ${v.name}`}
-                      className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
                     >
                       <Pencil size={16} />
                     </button>
@@ -146,7 +146,7 @@ export default function Vendors() {
                       type="button"
                       onClick={() => setDeleting(v)}
                       aria-label={`Delete ${v.name}`}
-                      className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
                     >
                       <Trash2 size={16} />
                     </button>
@@ -274,10 +274,10 @@ function VendorForm({
           </Field>
         </div>
         <div className="mt-4 flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <button type="button" onClick={onClose} className="btn-ghost">
             Cancel
           </button>
-          <button type="submit" className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+          <button type="submit" className="btn-primary">
             Save vendor
           </button>
         </div>
@@ -357,14 +357,14 @@ function VendorDetail({ vendor, onClose }: { vendor: Vendor; onClose: () => void
         <button
           type="button"
           onClick={() => navigate('/payments')}
-          className="flex-1 rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="btn-primary flex-1"
         >
           Schedule payment
         </button>
         <button
           type="button"
           onClick={() => navigate('/credits')}
-          className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="btn-ghost flex-1"
         >
           Credit dashboard
         </button>

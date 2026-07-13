@@ -3,12 +3,12 @@ import {
   BarChart3,
   ClipboardList,
   CreditCard,
-  FileText,
   FolderOpen,
   HardHat,
   IndianRupee,
   LayoutDashboard,
   Menu,
+  RotateCcw,
   Users,
   Wallet,
   Wifi,
@@ -50,16 +50,18 @@ export default function Layout() {
       : '✓ Synced';
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       {/* Top bar */}
-      <header className="sticky top-0 z-40 border-b border-gray-200 bg-white">
+      <header className="glass no-print sticky top-0 z-40">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-4 py-3">
-          <div className="flex items-center gap-2">
-            <HardHat className="text-blue-700" size={24} aria-hidden="true" />
-            <span className="text-lg font-bold text-gray-900">Konstructify</span>
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-ink text-amber-glow shadow-raise">
+              <HardHat size={20} aria-hidden="true" />
+            </span>
+            <span className="font-display text-xl tracking-tight text-ink">Konstructify</span>
           </div>
           <div className="flex items-center gap-3">
-            <span aria-live="polite" className="hidden text-sm text-gray-600 sm:inline">
+            <span aria-live="polite" className="num hidden text-xs font-bold text-ink/60 sm:inline">
               {syncLabel}
             </span>
             <button
@@ -69,8 +71,10 @@ export default function Layout() {
               aria-label={isOnline ? 'Online — click to simulate offline' : 'Offline — click to go back online'}
               title={isOnline ? 'Online — click to simulate offline' : 'Offline — click to reconnect'}
               className={clsx(
-                'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500',
-                isOnline ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800',
+                'flex cursor-pointer items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold uppercase tracking-wide transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-amber-500',
+                isOnline
+                  ? 'bg-emerald-100 text-emerald-900 ring-1 ring-inset ring-emerald-600/25'
+                  : 'bg-red-100 text-red-900 ring-1 ring-inset ring-red-600/25',
               )}
             >
               {isOnline ? <Wifi size={14} aria-hidden="true" /> : <WifiOff size={14} aria-hidden="true" />}
@@ -79,16 +83,19 @@ export default function Layout() {
           </div>
         </div>
         {!isOnline && (
-          <div className="bg-amber-50 px-4 py-1.5 text-center text-xs font-medium text-amber-800">
+          <div className="animate-fade-up bg-amber-glow px-4 py-1.5 text-center text-xs font-bold text-ink">
             Working offline — changes are saved locally and will sync when you reconnect.
           </div>
         )}
       </header>
 
       <div className="mx-auto flex max-w-7xl">
-        {/* Desktop sidebar */}
-        <nav aria-label="Main navigation" className="hidden w-56 shrink-0 border-r border-gray-200 bg-white md:block">
-          <ul className="sticky top-14 space-y-1 p-3">
+        {/* Desktop sidebar — dark blueprint shell */}
+        <nav
+          aria-label="Main navigation"
+          className="blueprint no-print my-5 ml-4 hidden w-60 shrink-0 self-start rounded-3xl shadow-lift md:block"
+        >
+          <ul className="sticky top-20 space-y-0.5 p-3">
             {NAV.map((item) => (
               <li key={item.path}>
                 <NavLink
@@ -96,13 +103,29 @@ export default function Layout() {
                   end={item.path === '/'}
                   className={({ isActive }) =>
                     clsx(
-                      'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500',
-                      isActive ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-100',
+                      'group relative flex items-center gap-3 overflow-hidden rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-500',
+                      isActive
+                        ? 'bg-white/10 text-amber-glow'
+                        : 'text-white/60 hover:bg-white/5 hover:text-white',
                     )
                   }
                 >
-                  <item.icon size={18} aria-hidden="true" />
-                  {item.name}
+                  {({ isActive }) => (
+                    <>
+                      {isActive && (
+                        <span
+                          aria-hidden="true"
+                          className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-amber-glow shadow-glow"
+                        />
+                      )}
+                      <item.icon
+                        size={18}
+                        aria-hidden="true"
+                        className="transition-transform duration-200 group-hover:-translate-y-0.5"
+                      />
+                      {item.name}
+                    </>
+                  )}
                 </NavLink>
               </li>
             ))}
@@ -110,9 +133,9 @@ export default function Layout() {
               <button
                 type="button"
                 onClick={resetData}
-                className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-white/40 transition-colors hover:bg-white/5 hover:text-white/70 focus:outline-none focus:ring-2 focus:ring-amber-500"
               >
-                <FileText size={18} aria-hidden="true" />
+                <RotateCcw size={18} aria-hidden="true" />
                 Reset demo data
               </button>
             </li>
@@ -120,15 +143,15 @@ export default function Layout() {
         </nav>
 
         {/* Main content */}
-        <main className="min-w-0 flex-1 px-4 py-5 pb-24 md:pb-8">
+        <main className="min-w-0 flex-1 px-4 py-6 pb-28 md:px-8 md:pb-10">
           <Outlet />
         </main>
       </div>
 
-      {/* Mobile bottom tab bar */}
+      {/* Mobile bottom dock */}
       <nav
         aria-label="Primary"
-        className="fixed bottom-0 left-0 right-0 z-40 border-t border-gray-200 bg-white md:hidden"
+        className="no-print fixed bottom-3 left-3 right-3 z-40 rounded-2xl bg-ink/95 shadow-lift backdrop-blur-xl md:hidden"
       >
         <div className="flex justify-around">
           {MOBILE_TABS.map((tab) => (
@@ -138,49 +161,68 @@ export default function Layout() {
               end={tab.path === '/'}
               className={({ isActive }) =>
                 clsx(
-                  'flex min-h-[52px] flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-medium focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500',
-                  isActive ? 'border-t-2 border-blue-600 text-blue-700' : 'text-gray-600',
+                  'flex min-h-[54px] flex-1 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-2xl py-2 text-[10px] font-bold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-amber-500',
+                  isActive ? 'text-amber-glow' : 'text-white/50',
                 )
               }
             >
-              <tab.icon size={22} aria-hidden="true" />
-              {tab.name}
+              {({ isActive }) => (
+                <>
+                  <tab.icon
+                    size={21}
+                    aria-hidden="true"
+                    className={clsx('transition-transform duration-200', isActive && '-translate-y-0.5')}
+                  />
+                  {tab.name}
+                  <span
+                    aria-hidden="true"
+                    className={clsx(
+                      'h-1 w-1 rounded-full bg-amber-glow transition-opacity',
+                      isActive ? 'opacity-100' : 'opacity-0',
+                    )}
+                  />
+                </>
+              )}
             </NavLink>
           ))}
           <button
             type="button"
             onClick={() => setMoreOpen(true)}
             aria-haspopup="dialog"
-            className="flex min-h-[52px] flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-medium text-gray-600 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+            className="flex min-h-[54px] flex-1 cursor-pointer flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-bold text-white/50 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-amber-500"
           >
-            <Menu size={22} aria-hidden="true" />
+            <Menu size={21} aria-hidden="true" />
             More
+            <span aria-hidden="true" className="h-1 w-1 rounded-full opacity-0" />
           </button>
         </div>
       </nav>
 
       {/* Mobile "More" sheet */}
       {moreOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 md:hidden" onClick={() => setMoreOpen(false)}>
+        <div
+          className="fixed inset-0 z-50 bg-ink/50 backdrop-blur-sm md:hidden"
+          onClick={() => setMoreOpen(false)}
+        >
           <div
             role="dialog"
             aria-modal="true"
             aria-label="More navigation"
             onClick={(e) => e.stopPropagation()}
-            className="absolute bottom-0 left-0 right-0 rounded-t-2xl bg-white p-4"
+            className="absolute bottom-0 left-0 right-0 animate-pop-in rounded-t-3xl bg-paper-soft p-4 shadow-lift"
           >
             <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-base font-bold text-gray-900">More</h2>
+              <h2 className="font-display text-lg text-ink">More</h2>
               <button
                 type="button"
                 onClick={() => setMoreOpen(false)}
                 aria-label="Close menu"
-                className="rounded p-1 text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="cursor-pointer rounded-full p-1.5 text-ink/50 hover:bg-ink/5 focus:outline-none focus:ring-2 focus:ring-amber-500"
               >
                 <X size={20} />
               </button>
             </div>
-            <ul className="space-y-1">
+            <ul className="stagger space-y-1">
               {MORE_TABS.map((item) => (
                 <li key={item.path}>
                   <NavLink
@@ -188,8 +230,8 @@ export default function Layout() {
                     onClick={() => setMoreOpen(false)}
                     className={({ isActive }) =>
                       clsx(
-                        'flex items-center gap-3 rounded-md px-3 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500',
-                        isActive ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-100',
+                        'flex cursor-pointer items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500',
+                        isActive ? 'bg-ink text-amber-glow' : 'text-ink/75 hover:bg-ink/5',
                       )
                     }
                   >
@@ -205,9 +247,9 @@ export default function Layout() {
                     resetData();
                     setMoreOpen(false);
                   }}
-                  className="flex w-full items-center gap-3 rounded-md px-3 py-3 text-sm font-medium text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold text-ink/45 transition-colors hover:bg-ink/5 focus:outline-none focus:ring-2 focus:ring-amber-500"
                 >
-                  <FileText size={18} aria-hidden="true" />
+                  <RotateCcw size={18} aria-hidden="true" />
                   Reset demo data
                 </button>
               </li>

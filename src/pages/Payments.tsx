@@ -76,7 +76,7 @@ export default function Payments() {
           <button
             type="button"
             onClick={() => setCreating(true)}
-            className="flex items-center gap-1.5 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            className="btn-primary flex items-center gap-1.5"
           >
             <Plus size={16} aria-hidden="true" /> New invoice
           </button>
@@ -92,8 +92,8 @@ export default function Payments() {
             type="button"
             onClick={() => setFilter(f)}
             aria-pressed={filter === f}
-            className={`rounded-full px-3 py-1.5 text-xs font-semibold capitalize focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              filter === f ? 'bg-blue-600 text-white' : 'border border-gray-300 bg-white text-gray-700'
+            className={`chip capitalize ${
+              filter === f ? 'chip-active' : 'chip-idle'
             }`}
           >
             {f}
@@ -104,12 +104,12 @@ export default function Payments() {
       {invoices.length === 0 ? (
         <EmptyState message="No invoices match this filter." />
       ) : (
-        <div className="space-y-2">
+        <div className="stagger space-y-2">
           {invoices.map((i) => {
             const vendor = state.vendors.find((v) => v.id === i.vendorId);
             const project = state.projects.find((p) => p.id === i.projectId);
             return (
-              <div key={i.id} className="rounded-lg border border-gray-200 bg-white p-3 sm:p-4">
+              <div key={i.id} className="panel panel-hover p-3 sm:p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="min-w-0">
                     <p className="font-semibold text-gray-900">
@@ -136,7 +136,7 @@ export default function Payments() {
                     <button
                       type="button"
                       onClick={() => setPaying(i)}
-                      className="flex items-center gap-1 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="btn-primary btn-sm flex items-center gap-1"
                     >
                       <Send size={14} aria-hidden="true" /> Pay
                     </button>
@@ -145,7 +145,7 @@ export default function Payments() {
                     <button
                       type="button"
                       onClick={() => markPaid(i)}
-                      className="flex items-center gap-1 rounded-md bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                      className="btn-success btn-sm flex items-center gap-1"
                     >
                       <CheckCircle2 size={14} aria-hidden="true" /> Mark paid
                     </button>
@@ -154,7 +154,7 @@ export default function Payments() {
                     type="button"
                     onClick={() => setDeleting(i)}
                     aria-label={`Delete invoice ${i.invoiceNumber}`}
-                    className="flex items-center gap-1 rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="btn-ghost btn-sm flex items-center gap-1 hover:text-red-600"
                   >
                     <Trash2 size={14} aria-hidden="true" /> Delete
                   </button>
@@ -285,10 +285,10 @@ function InvoiceForm({ onClose }: { onClose: () => void }) {
         )}
 
         <div className="mt-2 flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <button type="button" onClick={onClose} className="btn-ghost">
             Cancel
           </button>
-          <button type="submit" className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+          <button type="submit" className="btn-primary">
             Save invoice
           </button>
         </div>
@@ -327,16 +327,16 @@ function PaymentModal({ invoice, onClose }: { invoice: Invoice; onClose: () => v
         </p>
         <fieldset className="mt-4">
           <legend className="mb-2 text-sm font-medium text-gray-700">Payment mode</legend>
-          <div className="space-y-2">
+          <div className="stagger space-y-2">
             {modes.map((m) => (
-              <label key={m.value} className="flex cursor-pointer items-center gap-3 rounded-md border border-gray-200 p-3 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
+              <label key={m.value} className="flex cursor-pointer items-center gap-3 rounded-md border border-gray-200 p-3 has-[:checked]:border-amber-500 has-[:checked]:bg-amber-50">
                 <input
                   type="radio"
                   name="pay-mode"
                   value={m.value}
                   checked={mode === m.value}
                   onChange={() => setMode(m.value)}
-                  className="h-4 w-4 accent-blue-600"
+                  className="h-4 w-4 accent-amber-500"
                 />
                 <span className="text-sm font-semibold text-gray-900">{m.label}</span>
                 <span className="text-xs text-gray-500">{m.hint}</span>
@@ -348,10 +348,10 @@ function PaymentModal({ invoice, onClose }: { invoice: Invoice; onClose: () => v
           <input id="pay-date" type="date" className={inputCls} value={payOn} onChange={(e) => setPayOn(e.target.value)} />
         </Field>
         <div className="mt-4 flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <button type="button" onClick={onClose} className="btn-ghost">
             Cancel
           </button>
-          <button type="submit" className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+          <button type="submit" className="btn-primary">
             Schedule payment
           </button>
         </div>

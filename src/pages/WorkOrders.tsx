@@ -41,7 +41,7 @@ export default function WorkOrders() {
           <button
             type="button"
             onClick={() => setEditing('new')}
-            className="flex items-center gap-1.5 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            className="btn-primary flex items-center gap-1.5"
           >
             <Plus size={16} aria-hidden="true" /> New work order
           </button>
@@ -55,8 +55,8 @@ export default function WorkOrders() {
             type="button"
             onClick={() => setFilter(f)}
             aria-pressed={filter === f}
-            className={`rounded-full px-3 py-1.5 text-xs font-semibold capitalize focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              filter === f ? 'bg-blue-600 text-white' : 'border border-gray-300 bg-white text-gray-700'
+            className={`chip capitalize ${
+              filter === f ? 'chip-active' : 'chip-idle'
             }`}
           >
             {f}
@@ -67,12 +67,12 @@ export default function WorkOrders() {
       {orders.length === 0 ? (
         <EmptyState message="No work orders match this filter." />
       ) : (
-        <div className="space-y-2">
+        <div className="stagger space-y-2">
           {orders.map((w) => {
             const project = state.projects.find((p) => p.id === w.projectId);
             const overdue = w.status !== 'complete' && daysUntil(w.dueDate) < 0;
             return (
-              <div key={w.id} className="rounded-lg border border-gray-200 bg-white p-3 sm:p-4">
+              <div key={w.id} className="panel panel-hover p-3 sm:p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="min-w-0">
                     <p className="font-semibold text-gray-900">
@@ -104,7 +104,7 @@ export default function WorkOrders() {
                     <button
                       type="button"
                       onClick={() => markComplete(w)}
-                      className="flex items-center gap-1 rounded-md bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                      className="btn-success btn-sm flex items-center gap-1"
                     >
                       <CheckCircle2 size={14} aria-hidden="true" /> Mark complete
                     </button>
@@ -112,7 +112,7 @@ export default function WorkOrders() {
                   <button
                     type="button"
                     onClick={() => setEditing(w)}
-                    className="flex items-center gap-1 rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="btn-ghost btn-sm flex items-center gap-1"
                   >
                     <Pencil size={14} aria-hidden="true" /> Edit / reassign
                   </button>
@@ -120,7 +120,7 @@ export default function WorkOrders() {
                     type="button"
                     onClick={() => setDeleting(w)}
                     aria-label={`Delete ${w.orderNumber}`}
-                    className="flex items-center gap-1 rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="btn-ghost btn-sm flex items-center gap-1 hover:text-red-600"
                   >
                     <Trash2 size={14} aria-hidden="true" /> Delete
                   </button>
@@ -232,10 +232,10 @@ function WorkOrderForm({
           </Field>
         </div>
         <div className="mt-4 flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <button type="button" onClick={onClose} className="btn-ghost">
             Cancel
           </button>
-          <button type="submit" className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+          <button type="submit" className="btn-primary">
             Save work order
           </button>
         </div>

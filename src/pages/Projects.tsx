@@ -38,7 +38,7 @@ export default function Projects() {
           <button
             type="button"
             onClick={() => setEditing('new')}
-            className="flex items-center gap-1.5 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            className="btn-primary flex items-center gap-1.5"
           >
             <Plus size={16} aria-hidden="true" /> New project
           </button>
@@ -52,8 +52,8 @@ export default function Projects() {
             type="button"
             onClick={() => setFilter(f)}
             aria-pressed={filter === f}
-            className={`rounded-full px-3 py-1.5 text-xs font-semibold capitalize focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              filter === f ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border border-gray-300'
+            className={`chip capitalize ${
+              filter === f ? 'chip-active' : 'chip-idle'
             }`}
           >
             {f}
@@ -64,18 +64,18 @@ export default function Projects() {
       {projects.length === 0 ? (
         <EmptyState message="No projects match this filter. Create one with “New project”." />
       ) : (
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div className="stagger grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {projects.map((p) => {
             const spent = projectSpend(p.id, state);
             const over = spent > p.budget;
             const remaining = daysUntil(p.endDate);
             return (
-              <div key={p.id} className="rounded-lg border border-gray-200 bg-white p-4">
+              <div key={p.id} className="panel panel-hover p-4">
                 <div className="flex items-start justify-between gap-2">
                   <button
                     type="button"
                     onClick={() => setViewing(p)}
-                    className="text-left font-semibold text-gray-900 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="text-left font-semibold text-gray-900 hover:text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
                   >
                     {p.name}
                   </button>
@@ -101,7 +101,7 @@ export default function Projects() {
                       type="button"
                       onClick={() => setEditing(p)}
                       aria-label={`Edit ${p.name}`}
-                      className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
                     >
                       <Pencil size={16} />
                     </button>
@@ -109,7 +109,7 @@ export default function Projects() {
                       type="button"
                       onClick={() => setDeleting(p)}
                       aria-label={`Delete ${p.name}`}
-                      className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
                     >
                       <Trash2 size={16} />
                     </button>
@@ -218,10 +218,10 @@ function ProjectForm({
           </Field>
         </div>
         <div className="mt-4 flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <button type="button" onClick={onClose} className="btn-ghost">
             Cancel
           </button>
-          <button type="submit" className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+          <button type="submit" className="btn-primary">
             Save project
           </button>
         </div>

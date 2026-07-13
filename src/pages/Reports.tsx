@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Printer, Star } from 'lucide-react';
+import { Printer, Star, TrendingDown, TrendingUp } from 'lucide-react';
+import clsx from 'clsx';
 import { useApp } from '../contexts/AppContext';
-import { Badge, PageHeader } from '../components/ui';
+import { Badge, PageHeader, ProgressBar, Ring } from '../components/ui';
+import { useCountUp } from '../hooks/useFx';
 import {
   creditUsagePercent,
   creditUsed,
@@ -24,14 +26,14 @@ export default function Reports() {
           <button
             type="button"
             onClick={() => window.print()}
-            className="flex items-center gap-1.5 rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="btn-ghost no-print flex items-center gap-1.5"
           >
             <Printer size={16} aria-hidden="true" /> Print / PDF
           </button>
         }
       />
 
-      <div className="mb-4 flex flex-wrap gap-2" role="tablist" aria-label="Report type">
+      <div className="no-print mb-5 flex flex-wrap gap-2" role="tablist" aria-label="Report type">
         {(
           [
             ['projects', 'Project summary'],
@@ -45,9 +47,7 @@ export default function Reports() {
             role="tab"
             aria-selected={tab === key}
             onClick={() => setTab(key)}
-            className={`rounded-full px-4 py-1.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              tab === key ? 'bg-blue-600 text-white' : 'border border-gray-300 bg-white text-gray-700'
-            }`}
+            className={clsx('chip px-4 text-sm', tab === key ? 'chip-active' : 'chip-idle')}
           >
             {label}
           </button>
@@ -64,7 +64,7 @@ export default function Reports() {
 function ProjectSummary() {
   const { state } = useApp();
   return (
-    <div className="space-y-4">
+    <div className="stagger space-y-4">
       {state.projects.map((p) => {
         const spent = projectSpend(p.id, state);
         const estimate = projectEstimate(p.id, state);
@@ -86,63 +86,107 @@ function ProjectSummary() {
           .filter((x) => x.spend > 0)
           .sort((a, b) => b.spend - a.spend)
           .slice(0, 3);
+        const maxVendorSpend = vendorSpend[0]?.spend ?? 1;
         const overrunItems = state.budgetItems.filter((b) => {
           if (b.projectId !== p.id) return false;
           const est = b.quantity * b.unitRate;
           return est > 0 && b.actualSpend - est > 0.1 * est;
         });
+        const scheduleRisk = timePct > completion + 15;
         return (
-          <section key={p.id} className="rounded-lg border border-gray-200 bg-white p-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-base font-bold text-gray-900">{p.name}</h2>
+          <section key={p.id} className="panel overflow-hidden">
+            {/* Ink header band */}
+            <div className="blueprint flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+              <div>
+                <h2 className="font-display text-xl text-white">{p.name}</h2>
+                <p className="text-xs font-semibold uppercase tracking-wider text-white/45">
+                  {p.clientName} · {p.location}
+                </p>
+              </div>
               <Badge tone={p.status === 'in-progress' ? 'green' : p.status === 'on-hold' ? 'yellow' : 'blue'}>
                 {p.status}
               </Badge>
             </div>
-            <p className="text-sm text-gray-600">{p.clientName} · {p.location}</p>
-            <dl className="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
-              <Metric label="Budget used" value={`${formatINR(spent)} (${budgetPct.toFixed(0)}%)`} />
-              <Metric label="BOQ estimate" value={formatINR(estimate)} />
-              <Metric label="Timeline elapsed" value={`${timePct.toFixed(0)}%`} />
-              <Metric label="Est. completion" value={`${completion.toFixed(0)}%`} />
-            </dl>
-            <div className="mt-3 text-sm">
-              <p className="font-semibold text-gray-900">Top vendors</p>
-              {vendorSpend.length === 0 ? (
-                <p className="text-gray-500">No spend yet.</p>
-              ) : (
-                <ul className="mt-1 space-y-0.5 text-gray-700">
-                  {vendorSpend.map(({ vendor, spend }) => (
-                    <li key={vendor.id}>
-                      {vendor.name} — {formatINR(spend)}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            <div className="mt-3 text-sm">
-              <p className="font-semibold text-gray-900">Key risks</p>
-              {overrunItems.length === 0 && timePct <= completion + 15 ? (
-                <p className="text-green-700">No major risks detected ✓</p>
-              ) : (
-                <ul className="mt-1 list-inside list-disc space-y-0.5 text-red-700">
-                  {overrunItems.map((b) => {
-                    const est = b.quantity * b.unitRate;
-                    return (
-                      <li key={b.id}>
-                        {b.description} +{formatINR(b.actualSpend - est)} over estimate
+
+            <div className="grid grid-cols-1 gap-6 p-5 lg:grid-cols-[1fr_auto]">
+              <div>
+                {/* Twin progress meters */}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <Meter label="Budget used" pct={budgetPct} detail={`${formatINR(spent)} of ${formatINR(p.budget)}`} />
+                  <Meter label="Timeline elapsed" pct={timePct} detail={`BOQ estimate ${formatINR(estimate)}`} tone="bg-sky-500" />
+                </div>
+
+                {/* Top vendors — mini bar chart */}
+                <h3 className="mt-5 text-[11px] font-bold uppercase tracking-wider text-ink/45">Top vendors</h3>
+                {vendorSpend.length === 0 ? (
+                  <p className="mt-1 text-sm text-ink/45">No spend yet.</p>
+                ) : (
+                  <ul className="mt-2 space-y-2">
+                    {vendorSpend.map(({ vendor, spend }) => (
+                      <li key={vendor.id} className="flex items-center gap-3 text-sm">
+                        <span className="w-40 truncate font-semibold text-ink/80">{vendor.name}</span>
+                        <span className="h-3 flex-1 overflow-hidden rounded-full bg-ink/[0.06]">
+                          <span
+                            className="fill-animate block h-full rounded-full bg-gradient-to-r from-ink-600 to-ink"
+                            style={{ width: `${(spend / maxVendorSpend) * 100}%` }}
+                          />
+                        </span>
+                        <span className="num w-16 text-right font-bold text-ink">{formatINR(spend)}</span>
                       </li>
-                    );
-                  })}
-                  {timePct > completion + 15 && (
-                    <li>Schedule risk: {timePct.toFixed(0)}% of time used but only {completion.toFixed(0)}% complete</li>
-                  )}
-                </ul>
-              )}
+                    ))}
+                  </ul>
+                )}
+
+                {/* Risks */}
+                <h3 className="mt-5 text-[11px] font-bold uppercase tracking-wider text-ink/45">Key risks</h3>
+                {overrunItems.length === 0 && !scheduleRisk ? (
+                  <p className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-emerald-700">
+                    <TrendingUp size={15} aria-hidden="true" /> No major risks detected
+                  </p>
+                ) : (
+                  <ul className="mt-1.5 space-y-1.5 text-sm">
+                    {overrunItems.map((b) => {
+                      const est = b.quantity * b.unitRate;
+                      return (
+                        <li key={b.id} className="flex items-center gap-1.5 font-semibold text-red-700">
+                          <TrendingDown size={15} aria-hidden="true" />
+                          {b.description} +{formatINR(b.actualSpend - est)} over estimate
+                        </li>
+                      );
+                    })}
+                    {scheduleRisk && (
+                      <li className="flex items-center gap-1.5 font-semibold text-orange-700">
+                        <TrendingDown size={15} aria-hidden="true" />
+                        Schedule risk: {timePct.toFixed(0)}% of time used, only {completion.toFixed(0)}% complete
+                      </li>
+                    )}
+                  </ul>
+                )}
+              </div>
+
+              {/* Completion ring */}
+              <div className="flex items-center justify-center lg:pr-2">
+                <Ring percent={completion} size={116} stroke={10} label={`${completion.toFixed(0)}%`} sublabel="complete" />
+              </div>
             </div>
           </section>
         );
       })}
+    </div>
+  );
+}
+
+function Meter({ label, pct, detail, tone }: { label: string; pct: number; detail: string; tone?: string }) {
+  return (
+    <div>
+      <div className="flex items-baseline justify-between">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-ink/45">{label}</span>
+        <span className="num text-sm font-bold text-ink">{pct.toFixed(0)}%</span>
+      </div>
+      <div className="mt-1.5">
+        <ProgressBar percent={pct} tone={tone} />
+      </div>
+      <p className="num mt-1 text-xs text-ink/50">{detail}</p>
     </div>
   );
 }
@@ -162,45 +206,88 @@ function VendorPerformance() {
       }),
     [state],
   );
+  const best = [...rows].sort((a, b) => b.overall - a.overall)[0];
+  const biggest = [...rows].sort((a, b) => b.totalSpend - a.totalSpend)[0];
+
   return (
-    <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
-      <table className="w-full min-w-[720px] text-sm">
-        <thead>
-          <tr className="border-b border-gray-200 text-left text-xs uppercase tracking-wide text-gray-500">
-            <th scope="col" className="px-3 py-2">Vendor</th>
-            <th scope="col" className="px-3 py-2">Invoices</th>
-            <th scope="col" className="px-3 py-2">Total spend</th>
-            <th scope="col" className="px-3 py-2">Paid on time</th>
-            <th scope="col" className="px-3 py-2">Credit usage</th>
-            <th scope="col" className="px-3 py-2">Quality</th>
-            <th scope="col" className="px-3 py-2">Overall</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map(({ vendor, invoices, paid, onTime, totalSpend, usage, overall }) => (
-            <tr key={vendor.id} className="border-b border-gray-100 last:border-0">
-              <td className="px-3 py-2 font-medium text-gray-900">{vendor.name}</td>
-              <td className="px-3 py-2 text-gray-600">{invoices.length}</td>
-              <td className="px-3 py-2 text-gray-900">{formatINR(totalSpend)}</td>
-              <td className="px-3 py-2 text-gray-600">
-                {paid.length > 0 ? `${Math.round((onTime.length / paid.length) * 100)}%` : '—'}
-              </td>
-              <td className="px-3 py-2">
-                <Badge tone={usage > 95 ? 'red' : usage > 80 ? 'orange' : usage > 50 ? 'yellow' : 'green'}>
-                  {usage.toFixed(0)}%
-                </Badge>
-              </td>
-              <td className="px-3 py-2 text-gray-600">{vendor.ratingQuality.toFixed(1)}★</td>
-              <td className="px-3 py-2">
-                <span className="flex items-center gap-1 font-semibold text-gray-900">
-                  <Star size={13} className="text-yellow-500" aria-hidden="true" />
-                  {overall.toFixed(1)}
-                </span>
-              </td>
+    <div className="animate-fade-up">
+      {/* Highlights band */}
+      <div className="stagger mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {best && (
+          <Highlight
+            label="Top rated partner"
+            value={best.vendor.name}
+            detail={`${best.overall.toFixed(1)}★ overall · ${best.vendor.ratingQuality.toFixed(1)} quality`}
+          />
+        )}
+        {biggest && (
+          <Highlight
+            label="Largest spend"
+            value={biggest.vendor.name}
+            detail={`${formatINR(biggest.totalSpend)} across ${biggest.invoices.length} invoices`}
+          />
+        )}
+      </div>
+
+      <div className="panel overflow-x-auto">
+        <table className="w-full min-w-[760px] text-sm">
+          <thead>
+            <tr className="border-b border-ink/10 text-left text-[11px] font-bold uppercase tracking-wider text-ink/45">
+              <th scope="col" className="px-4 py-3">Vendor</th>
+              <th scope="col" className="px-4 py-3">Invoices</th>
+              <th scope="col" className="px-4 py-3">Total spend</th>
+              <th scope="col" className="px-4 py-3">Paid on time</th>
+              <th scope="col" className="px-4 py-3">Credit usage</th>
+              <th scope="col" className="px-4 py-3">Quality</th>
+              <th scope="col" className="px-4 py-3">Overall</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map(({ vendor, invoices, paid, onTime, totalSpend, usage, overall }) => (
+              <tr key={vendor.id} className="border-b border-ink/5 transition-colors last:border-0 hover:bg-paper-soft">
+                <td className="px-4 py-3 font-semibold text-ink">{vendor.name}</td>
+                <td className="num px-4 py-3 text-ink/60">{invoices.length}</td>
+                <td className="num px-4 py-3 font-semibold text-ink">{formatINR(totalSpend)}</td>
+                <td className="num px-4 py-3 text-ink/60">
+                  {paid.length > 0 ? `${Math.round((onTime.length / paid.length) * 100)}%` : '—'}
+                </td>
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-16 overflow-hidden rounded-full bg-ink/10">
+                      <span
+                        className={clsx(
+                          'fill-animate block h-full rounded-full',
+                          usage > 95 ? 'bg-red-500' : usage > 80 ? 'bg-orange-500' : usage > 50 ? 'bg-amber-500' : 'bg-emerald-500',
+                        )}
+                        style={{ width: `${Math.min(usage, 100)}%` }}
+                      />
+                    </span>
+                    <span className="num text-xs font-bold text-ink/70">{usage.toFixed(0)}%</span>
+                  </div>
+                </td>
+                <td className="num px-4 py-3 text-ink/60">{vendor.ratingQuality.toFixed(1)}★</td>
+                <td className="px-4 py-3">
+                  <span className="num flex items-center gap-1 font-bold text-ink">
+                    <Star size={13} className="fill-amber-400 text-amber-400" aria-hidden="true" />
+                    {overall.toFixed(1)}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function Highlight({ label, value, detail }: { label: string; value: string; detail: string }) {
+  return (
+    <div className="blueprint relative overflow-hidden rounded-2xl p-4 text-white shadow-lift">
+      <div aria-hidden="true" className="pointer-events-none absolute -right-8 -top-12 h-32 w-32 rounded-full bg-amber-glow/15 blur-2xl" />
+      <p className="text-[10px] font-bold uppercase tracking-wider text-white/45">{label}</p>
+      <p className="font-display mt-1 text-lg text-amber-glow">{value}</p>
+      <p className="num mt-0.5 text-xs text-white/60">{detail}</p>
     </div>
   );
 }
@@ -215,7 +302,7 @@ function CashFlow() {
       const due = state.invoices.filter((i) => {
         if (i.status !== 'unpaid') return false;
         const d = daysUntil(i.dueDate);
-        return (w === 0 ? d < to : d >= from && d < to);
+        return w === 0 ? d < to : d >= from && d < to;
       });
       const byVendor = new Map<string, number>();
       for (const i of due) {
@@ -223,7 +310,7 @@ function CashFlow() {
         byVendor.set(name, (byVendor.get(name) ?? 0) + i.amount);
       }
       out.push({
-        label: w === 0 ? 'Week 1 (incl. overdue)' : `Week ${w + 1}`,
+        label: `Week ${w + 1}`,
         total: due.reduce((s, i) => s + i.amount, 0),
         parts: [...byVendor.entries()].map(([n, a]) => `${n} ${formatINR(a)}`),
       });
@@ -232,6 +319,7 @@ function CashFlow() {
   }, [state]);
 
   const totalDue = weeks.reduce((s, w) => s + w.total, 0);
+  const maxWeek = Math.max(...weeks.map((w) => w.total), 1);
   const cash = 20_00_000;
   const overrunPrediction = state.budgetItems.reduce((s, b) => {
     const est = b.quantity * b.unitRate;
@@ -239,32 +327,60 @@ function CashFlow() {
     return est > 0 && variance > 0.1 * est ? s + variance * 2.5 : s;
   }, 0);
   const totalUsed = state.vendors.reduce((s, v) => s + creditUsed(v.id, state.invoices), 0);
+  const animatedDue = useCountUp(totalDue);
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Metric label="Payables (30 days)" value={formatINR(totalDue)} />
-        <Metric label="Cash on hand" value={formatINR(cash)} />
-        <Metric label="Cash after payables" value={formatINR(cash - totalDue)} />
-        <Metric label="Predicted overrun" value={overrunPrediction > 0 ? `+${formatINR(overrunPrediction)}` : '—'} />
+    <div className="animate-fade-up space-y-4">
+      {/* Headline metrics */}
+      <div className="stagger grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <MetricTile label="Payables (30 days)" value={formatINR(Math.round(animatedDue))} warn={totalDue > cash} />
+        <MetricTile label="Cash on hand" value={formatINR(cash)} />
+        <MetricTile label="Cash after payables" value={formatINR(cash - totalDue)} warn={cash - totalDue < 0} />
+        <MetricTile
+          label="Predicted overrun"
+          value={overrunPrediction > 0 ? `+${formatINR(overrunPrediction)}` : '—'}
+          warn={overrunPrediction > 0}
+        />
       </div>
-      <div className="rounded-lg border border-gray-200 bg-white p-4">
-        <h2 className="mb-3 text-base font-bold text-gray-900">Payables by week</h2>
-        <ul className="space-y-3">
+
+      {/* Animated weekly bar chart */}
+      <div className="panel p-5 sm:p-6">
+        <h2 className="font-display text-xl text-ink">Payables by week</h2>
+        <p className="mt-0.5 text-xs font-semibold uppercase tracking-wider text-ink/40">
+          Week 1 includes overdue invoices
+        </p>
+        <div className="mt-6 grid grid-cols-4 items-end gap-3 sm:gap-6" style={{ height: 180 }} role="img" aria-label={`Weekly payables: ${weeks.map((w) => `${w.label} ${formatINR(w.total)}`).join(', ')}`}>
+          {weeks.map((w, idx) => (
+            <div key={w.label} className="flex h-full flex-col items-center justify-end gap-2">
+              <span className="num text-sm font-bold text-ink">{formatINR(w.total)}</span>
+              <div
+                className={clsx(
+                  'w-full max-w-[72px] origin-bottom animate-bar-grow rounded-t-xl',
+                  w.total > cash
+                    ? 'bg-gradient-to-t from-red-600 to-red-400'
+                    : 'bg-gradient-to-t from-ink to-ink-600',
+                )}
+                style={{
+                  height: `${Math.max((w.total / maxWeek) * 100, w.total > 0 ? 6 : 2)}%`,
+                  animationDelay: `${idx * 90}ms`,
+                }}
+              />
+              <span className="text-[11px] font-bold uppercase tracking-wide text-ink/45">{w.label}</span>
+            </div>
+          ))}
+        </div>
+        <ul className="mt-5 space-y-1.5 border-t border-ink/10 pt-4 text-xs text-ink/60">
           {weeks.map((w) => (
             <li key={w.label}>
-              <div className="flex justify-between text-sm font-semibold text-gray-900">
-                <span>{w.label}</span>
-                <span className={w.total > cash ? 'text-red-600' : ''}>{formatINR(w.total)}</span>
-              </div>
-              <p className="text-xs text-gray-600">{w.parts.length > 0 ? w.parts.join(' · ') : 'Nothing due'}</p>
+              <span className="font-bold text-ink">{w.label}:</span>{' '}
+              {w.parts.length > 0 ? w.parts.join(' · ') : 'Nothing due'}
             </li>
           ))}
         </ul>
-        <p className="mt-4 text-sm text-gray-700">
-          Total outstanding vendor credit: <strong>{formatINR(totalUsed)}</strong> · Confidence:{' '}
+        <p className="mt-4 flex flex-wrap items-center gap-2 text-sm text-ink/70">
+          Total outstanding vendor credit: <span className="num font-bold text-ink">{formatINR(totalUsed)}</span>
           <Badge tone={overrunPrediction > 0 ? 'yellow' : 'green'}>
-            {overrunPrediction > 0 ? 'Medium — costs trending up' : 'High'}
+            Confidence: {overrunPrediction > 0 ? 'Medium — costs trending up' : 'High'}
           </Badge>
         </p>
       </div>
@@ -272,11 +388,11 @@ function CashFlow() {
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function MetricTile({ label, value, warn }: { label: string; value: string; warn?: boolean }) {
   return (
-    <div className="rounded bg-gray-50 p-2.5">
-      <dt className="text-xs text-gray-500">{label}</dt>
-      <dd className="font-semibold text-gray-900">{value}</dd>
+    <div className="panel panel-hover p-4">
+      <p className="text-[11px] font-bold uppercase tracking-wider text-ink/45">{label}</p>
+      <p className={clsx('num mt-1.5 text-xl font-bold sm:text-2xl', warn ? 'text-red-600' : 'text-ink')}>{value}</p>
     </div>
   );
 }

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
-import { AICard, Badge, PageHeader, ProgressBar } from '../components/ui';
+import { AICard, Badge, PageHeader, Ring } from '../components/ui';
+import { useCountUp } from '../hooks/useFx';
 import { healthBadge } from './Vendors';
 import {
   agingBuckets,
@@ -34,10 +35,26 @@ export default function Credits() {
     <div>
       <PageHeader title="Vendor Credits" subtitle="Real-time credit exposure across all vendors" />
 
-      <div className="mb-5 grid grid-cols-3 gap-3">
-        <Summary label="Total credit limit" value={formatINR(totalLimit)} />
-        <Summary label="Used" value={formatINR(totalUsed)} />
-        <Summary label="Available" value={formatINR(totalLimit - totalUsed)} />
+      {/* Exposure summary — dark hero band */}
+      <div className="blueprint relative mb-6 animate-fade-up overflow-hidden rounded-3xl p-5 text-white shadow-lift sm:p-7">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-16 -top-24 h-72 w-72 rounded-full bg-amber-glow/15 blur-3xl"
+        />
+        <div className="relative grid grid-cols-3 gap-4">
+          <Summary label="Total credit limit" value={totalLimit} />
+          <Summary label="Used" value={totalUsed} accent />
+          <Summary label="Available" value={totalLimit - totalUsed} positive />
+        </div>
+        <div className="relative mt-5 h-2.5 overflow-hidden rounded-full bg-white/10">
+          <div
+            className="fill-animate h-full rounded-full bg-gradient-to-r from-amber-glow to-orange-500"
+            style={{ width: `${Math.min((totalUsed / Math.max(totalLimit, 1)) * 100, 100)}%` }}
+          />
+        </div>
+        <p className="relative mt-2 text-xs font-semibold uppercase tracking-wider text-white/45">
+          {((totalUsed / Math.max(totalLimit, 1)) * 100).toFixed(0)}% of the network drawn
+        </p>
       </div>
 
       {suggestions.slice(0, 2).map((s) => (
@@ -49,7 +66,7 @@ export default function Credits() {
         />
       ))}
 
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+      <div className="stagger grid grid-cols-1 gap-3 lg:grid-cols-2">
         {state.vendors.map((v) => {
           const used = creditUsed(v.id, state.invoices);
           const pct = creditUsagePercent(v, state.invoices) * 100;
@@ -60,41 +77,41 @@ export default function Credits() {
             .filter((i) => i.vendorId === v.id && i.status === 'unpaid')
             .sort((a, b) => a.dueDate.localeCompare(b.dueDate))[0];
           return (
-            <div key={v.id} className="rounded-lg border border-gray-200 bg-white p-4">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <h3 className="font-semibold text-gray-900">{v.name}</h3>
-                  <p className="text-xs text-gray-500">{v.paymentTerms} terms</p>
+            <div key={v.id} className="panel panel-hover p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-4">
+                  <Ring percent={pct} label={`${pct.toFixed(0)}%`} sublabel="used" />
+                  <div>
+                    <h3 className="font-display text-lg text-ink">{v.name}</h3>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-ink/45">
+                      {v.paymentTerms} terms
+                    </p>
+                    <p className="num mt-1.5 text-sm text-ink/70">
+                      {formatINR(used)} used ·{' '}
+                      <span className="font-bold text-emerald-700">
+                        {formatINR(creditAvailable(v, state.invoices))} free
+                      </span>
+                    </p>
+                  </div>
                 </div>
                 {healthBadge(health, overdue)}
               </div>
-              <div className="mt-3 flex justify-between text-sm">
-                <span className="text-gray-600">
-                  {formatINR(used)} used ({pct.toFixed(0)}%)
-                </span>
-                <span className="font-medium text-green-700">
-                  {formatINR(creditAvailable(v, state.invoices))} free
-                </span>
-              </div>
-              <div className="mt-1.5">
-                <ProgressBar percent={pct} />
-              </div>
-              <div className="mt-3 grid grid-cols-4 gap-1 text-center text-xs">
+              <div className="mt-4 grid grid-cols-4 gap-1.5 text-center text-xs">
                 {[
                   ['<30d', aging.b0to30],
                   ['30–60d', aging.b30to60],
                   ['60–90d', aging.b60to90],
                   ['90d+', aging.b90plus],
                 ].map(([label, amt]) => (
-                  <div key={String(label)} className="rounded bg-gray-50 p-1.5">
-                    <p className="text-gray-500">{label}</p>
-                    <p className="font-semibold text-gray-900">{formatINR(Number(amt))}</p>
+                  <div key={String(label)} className="rounded-xl bg-ink/[0.04] p-2">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-ink/40">{label}</p>
+                    <p className="num font-bold text-ink">{formatINR(Number(amt))}</p>
                   </div>
                 ))}
               </div>
               {nextDue && (
-                <p className="mt-2 text-xs text-gray-600">
-                  Next due: {nextDue.invoiceNumber} ({formatINR(nextDue.amount)}){' '}
+                <p className="mt-3 flex items-center gap-2 text-xs text-ink/60">
+                  Next due: <span className="num font-bold text-ink">{nextDue.invoiceNumber} ({formatINR(nextDue.amount)})</span>
                   {daysUntil(nextDue.dueDate) < 0 ? (
                     <Badge tone="red">{-daysUntil(nextDue.dueDate)}d overdue</Badge>
                   ) : (
@@ -107,9 +124,9 @@ export default function Credits() {
               <button
                 type="button"
                 onClick={() => navigate('/payments')}
-                className="mt-3 w-full rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="btn-ghost mt-4 w-full font-bold text-amber-700 hover:border-amber-500/50 hover:bg-amber-50"
               >
-                Pay early to free credit
+                Pay early to free credit →
               </button>
             </div>
           );
@@ -119,11 +136,28 @@ export default function Credits() {
   );
 }
 
-function Summary({ label, value }: { label: string; value: string }) {
+function Summary({
+  label,
+  value,
+  accent,
+  positive,
+}: {
+  label: string;
+  value: number;
+  accent?: boolean;
+  positive?: boolean;
+}) {
+  const animated = useCountUp(value);
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4">
-      <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{label}</p>
-      <p className="mt-1 text-lg font-bold text-gray-900 sm:text-xl">{value}</p>
+    <div>
+      <p className="text-[10px] font-bold uppercase tracking-wider text-white/45 sm:text-[11px]">{label}</p>
+      <p
+        className={`num mt-1 text-xl font-bold sm:text-3xl ${
+          accent ? 'text-amber-glow' : positive ? 'text-emerald-400' : 'text-white'
+        }`}
+      >
+        {formatINR(Math.round(animated))}
+      </p>
     </div>
   );
 }

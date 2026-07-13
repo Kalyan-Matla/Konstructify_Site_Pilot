@@ -41,7 +41,7 @@ export default function Budgeting() {
           <button
             type="button"
             onClick={() => setEditing('new')}
-            className="flex items-center gap-1.5 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            className="btn-primary flex items-center gap-1.5"
           >
             <Plus size={16} aria-hidden="true" /> New BOQ item
           </button>
@@ -52,7 +52,7 @@ export default function Budgeting() {
         <label htmlFor="bq-project" className="mr-2 text-sm text-gray-600">Project</label>
         <select
           id="bq-project"
-          className="rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="rounded-xl border border-ink/15 bg-white px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
           value={projectId}
           onChange={(e) => setProjectId(e.target.value)}
         >
@@ -65,7 +65,7 @@ export default function Budgeting() {
       <div className="mb-4 grid grid-cols-3 gap-3">
         <Summary label="BOQ estimate" value={formatINR(totalEstimate)} />
         <Summary label="Actual spend" value={formatINR(totalActual)} />
-        <div className="rounded-lg border border-gray-200 bg-white p-4">
+        <div className="panel panel-hover p-4">
           <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Variance</p>
           <p className={`mt-1 text-lg font-bold sm:text-xl ${totalVariance > 0 ? 'text-red-600' : 'text-green-700'}`}>
             {totalVariance > 0 ? '+' : ''}{formatINR(totalVariance)}
@@ -78,7 +78,7 @@ export default function Budgeting() {
       {items.length === 0 ? (
         <EmptyState message={`No BOQ items for ${project?.name ?? 'this project'} yet.`} />
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+        <div className="overflow-x-auto panel">
           <table className="w-full min-w-[680px] text-sm">
             <thead>
               <tr className="border-b border-gray-200 text-left text-xs uppercase tracking-wide text-gray-500">
@@ -120,10 +120,10 @@ export default function Budgeting() {
                     </td>
                     <td className="px-3 py-2">
                       <div className="flex gap-1">
-                        <button type="button" onClick={() => setEditing(b)} aria-label={`Edit ${b.description}`} className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <button type="button" onClick={() => setEditing(b)} aria-label={`Edit ${b.description}`} className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
                           <Pencil size={15} />
                         </button>
-                        <button type="button" onClick={() => setDeleting(b)} aria-label={`Delete ${b.description}`} className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <button type="button" onClick={() => setDeleting(b)} aria-label={`Delete ${b.description}`} className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
                           <Trash2 size={15} />
                         </button>
                       </div>
@@ -165,7 +165,7 @@ export default function Budgeting() {
 
 function Summary({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4">
+    <div className="panel panel-hover p-4">
       <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{label}</p>
       <p className="mt-1 text-lg font-bold text-gray-900 sm:text-xl">{value}</p>
     </div>
@@ -237,10 +237,10 @@ function BudgetForm({
           Total estimate: <strong>{formatINR(qty * rate)}</strong>
         </p>
         <div className="mt-2 flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <button type="button" onClick={onClose} className="btn-ghost">
             Cancel
           </button>
-          <button type="submit" className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+          <button type="submit" className="btn-primary">
             Save item
           </button>
         </div>

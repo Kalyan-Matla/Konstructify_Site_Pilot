@@ -74,7 +74,7 @@ export default function WorkStatus() {
           <button
             type="button"
             onClick={() => setEditing('new')}
-            className="flex items-center gap-1.5 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            className="btn-primary flex items-center gap-1.5"
           >
             <Plus size={16} aria-hidden="true" /> New task
           </button>
@@ -88,8 +88,8 @@ export default function WorkStatus() {
             type="button"
             onClick={() => setFilter(f)}
             aria-pressed={filter === f}
-            className={`rounded-full px-3 py-1.5 text-xs font-semibold capitalize focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              filter === f ? 'bg-blue-600 text-white' : 'border border-gray-300 bg-white text-gray-700'
+            className={`chip capitalize ${
+              filter === f ? 'chip-active' : 'chip-idle'
             }`}
           >
             {f}
@@ -97,7 +97,7 @@ export default function WorkStatus() {
         ))}
         <select
           aria-label="Filter by project"
-          className="ml-auto rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="ml-auto rounded-xl border border-ink/15 bg-white px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
           value={projectFilter}
           onChange={(e) => setProjectFilter(e.target.value)}
         >
@@ -111,16 +111,16 @@ export default function WorkStatus() {
       {tasks.length === 0 ? (
         <EmptyState message="No tasks match. Create one with “New task”." />
       ) : (
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div className="stagger grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {tasks.map((t) => {
             const overdue = t.status !== 'complete' && daysUntil(t.dueDate) < 0;
             return (
-              <div key={t.id} className="rounded-lg border border-gray-200 bg-white p-4">
+              <div key={t.id} className="panel panel-hover p-4">
                 <div className="flex items-start justify-between gap-2">
                   <button
                     type="button"
                     onClick={() => setViewing(t.id)}
-                    className="text-left font-semibold text-gray-900 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="text-left font-semibold text-gray-900 hover:text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
                   >
                     {t.name}
                   </button>
@@ -145,10 +145,10 @@ export default function WorkStatus() {
                 <div className="mt-2 flex items-center justify-between">
                   <SyncBadge entity="task" id={t.id} />
                   <div className="flex gap-1">
-                    <button type="button" onClick={() => setEditing(t)} aria-label={`Edit ${t.name}`} className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <button type="button" onClick={() => setEditing(t)} aria-label={`Edit ${t.name}`} className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
                       <Pencil size={16} />
                     </button>
-                    <button type="button" onClick={() => setDeleting(t)} aria-label={`Delete ${t.name}`} className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <button type="button" onClick={() => setDeleting(t)} aria-label={`Delete ${t.name}`} className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -255,10 +255,10 @@ function TaskForm({
           </Field>
         </div>
         <div className="mt-4 flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <button type="button" onClick={onClose} className="btn-ghost">
             Cancel
           </button>
-          <button type="submit" className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+          <button type="submit" className="btn-primary">
             Save task
           </button>
         </div>
@@ -339,7 +339,7 @@ function TaskDetail({ task, onClose }: { task: WorkTask; onClose: () => void }) 
           step={5}
           value={task.percentComplete}
           onChange={(e) => setPercent(Number(e.target.value))}
-          className="w-full accent-blue-600"
+          className="w-full accent-amber-500"
         />
         <ProgressBar percent={task.percentComplete} tone={progressTone(task.percentComplete)} />
       </div>
@@ -357,7 +357,7 @@ function TaskDetail({ task, onClose }: { task: WorkTask; onClose: () => void }) 
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
-            className="flex items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="btn-ghost btn-sm flex items-center gap-1.5"
           >
             <Camera size={14} aria-hidden="true" /> Add photo
           </button>
@@ -378,7 +378,7 @@ function TaskDetail({ task, onClose }: { task: WorkTask; onClose: () => void }) 
                 type="button"
                 onClick={() => removePhoto(p.id)}
                 aria-label="Delete photo"
-                className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white hover:bg-black/80 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white hover:bg-black/80 focus:outline-none focus:ring-2 focus:ring-amber-500"
               >
                 <Trash2 size={12} />
               </button>
@@ -394,7 +394,7 @@ function TaskDetail({ task, onClose }: { task: WorkTask; onClose: () => void }) 
             upsert('task', { ...task, status: 'complete', percentComplete: 100 }, `Task "${task.name}" completed`);
             onClose();
           }}
-          className="mt-4 flex w-full items-center justify-center gap-2 rounded-md bg-green-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+          className="btn-success mt-4 flex w-full items-center justify-center gap-2"
         >
           <CheckCircle2 size={16} aria-hidden="true" /> Mark complete
         </button>
