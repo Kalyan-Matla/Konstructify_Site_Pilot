@@ -56,7 +56,7 @@ export default {
       },
       animation: {
         'fade-up': 'fade-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) both',
-        'pop-in': 'pop-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both',
+        'pop-in': 'pop-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both',
         sheen: 'sheen 2.4s ease-in-out infinite',
         'bar-grow': 'bar-grow 0.9s cubic-bezier(0.22, 1, 0.36, 1) both',
         ticker: 'ticker 0.4s ease-out both',

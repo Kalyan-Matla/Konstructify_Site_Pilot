@@ -52,7 +52,7 @@ export default function Credits() {
             style={{ width: `${Math.min((totalUsed / Math.max(totalLimit, 1)) * 100, 100)}%` }}
           />
         </div>
-        <p className="relative mt-2 text-xs font-semibold uppercase tracking-wider text-white/45">
+        <p className="relative mt-2 text-xs font-semibold uppercase tracking-wider text-white/55">
           {((totalUsed / Math.max(totalLimit, 1)) * 100).toFixed(0)}% of the network drawn
         </p>
       </div>
@@ -83,7 +83,7 @@ export default function Credits() {
                   <Ring percent={pct} label={`${pct.toFixed(0)}%`} sublabel="used" />
                   <div>
                     <h3 className="font-display text-lg text-ink">{v.name}</h3>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-ink/45">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-ink/60">
                       {v.paymentTerms} terms
                     </p>
                     <p className="num mt-1.5 text-sm text-ink/70">
@@ -150,7 +150,7 @@ function Summary({
   const animated = useCountUp(value);
   return (
     <div>
-      <p className="text-[10px] font-bold uppercase tracking-wider text-white/45 sm:text-[11px]">{label}</p>
+      <p className="text-[10px] font-bold uppercase tracking-wider text-white/55 sm:text-[11px]">{label}</p>
       <p
         className={`num mt-1 text-xl font-bold sm:text-3xl ${
           accent ? 'text-amber-glow' : positive ? 'text-emerald-400' : 'text-white'

@@ -398,7 +398,7 @@ export default function Landing({ onEnter }: { onEnter: () => void }) {
           ].map(([big, label], i) => (
             <div key={i} className="reveal text-center" style={{ transitionDelay: `${i * 80}ms` }}>
               <p className="num font-display text-4xl text-ink sm:text-5xl">{big as ReactNode}</p>
-              <p className="mt-1.5 text-xs font-semibold uppercase tracking-wide text-ink/45">
+              <p className="mt-1.5 text-xs font-semibold uppercase tracking-wide text-ink/60">
                 {label as ReactNode}
               </p>
             </div>
@@ -456,7 +456,7 @@ export default function Landing({ onEnter }: { onEnter: () => void }) {
       </section>
 
       {/* Footer */}
-      <footer className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-5 py-8 text-xs text-ink/45 sm:flex-row">
+      <footer className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-5 py-8 text-xs text-ink/60 sm:flex-row">
         <span className="flex items-center gap-2">
           <span className="flex h-6 w-6 items-center justify-center rounded-md bg-ink text-amber-glow">
             <HardHat size={13} aria-hidden="true" />

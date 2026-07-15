@@ -86,7 +86,7 @@ export default function Budgeting() {
         <div className="overflow-x-auto panel">
           <table className="w-full min-w-[680px] text-sm">
             <thead>
-              <tr className="border-b border-ink/10 bg-paper-soft text-left text-[11px] font-bold uppercase tracking-wider text-ink/45">
+              <tr className="border-b border-ink/10 bg-paper-soft text-left text-[11px] font-bold uppercase tracking-wider text-ink/60">
                 <th scope="col" className="px-4 py-2.5">Item</th>
                 <th scope="col" className="px-4 py-2.5 text-right">Qty</th>
                 <th scope="col" className="px-4 py-2.5 text-right">Rate</th>

@@ -99,7 +99,7 @@ function ProjectSummary() {
             <div className="blueprint flex flex-wrap items-center justify-between gap-3 px-5 py-4">
               <div>
                 <h2 className="font-display text-xl text-white">{p.name}</h2>
-                <p className="text-xs font-semibold uppercase tracking-wider text-white/45">
+                <p className="text-xs font-semibold uppercase tracking-wider text-white/55">
                   {p.clientName} · {p.location}
                 </p>
               </div>
@@ -117,9 +117,9 @@ function ProjectSummary() {
                 </div>
 
                 {/* Top vendors — mini bar chart */}
-                <h3 className="mt-5 text-[11px] font-bold uppercase tracking-wider text-ink/45">Top vendors</h3>
+                <h3 className="mt-5 text-[11px] font-bold uppercase tracking-wider text-ink/60">Top vendors</h3>
                 {vendorSpend.length === 0 ? (
-                  <p className="mt-1 text-sm text-ink/45">No spend yet.</p>
+                  <p className="mt-1 text-sm text-ink/60">No spend yet.</p>
                 ) : (
                   <ul className="mt-2 space-y-2">
                     {vendorSpend.map(({ vendor, spend }) => (
@@ -138,7 +138,7 @@ function ProjectSummary() {
                 )}
 
                 {/* Risks */}
-                <h3 className="mt-5 text-[11px] font-bold uppercase tracking-wider text-ink/45">Key risks</h3>
+                <h3 className="mt-5 text-[11px] font-bold uppercase tracking-wider text-ink/60">Key risks</h3>
                 {overrunItems.length === 0 && !scheduleRisk ? (
                   <p className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-emerald-700">
                     <TrendingUp size={15} aria-hidden="true" /> No major risks detected
@@ -180,7 +180,7 @@ function Meter({ label, pct, detail, tone }: { label: string; pct: number; detai
   return (
     <div>
       <div className="flex items-baseline justify-between">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-ink/45">{label}</span>
+        <span className="text-[11px] font-bold uppercase tracking-wider text-ink/60">{label}</span>
         <span className="num text-sm font-bold text-ink">{pct.toFixed(0)}%</span>
       </div>
       <div className="mt-1.5">
@@ -232,23 +232,23 @@ function VendorPerformance() {
       <div className="panel overflow-x-auto">
         <table className="w-full min-w-[760px] text-sm">
           <thead>
-            <tr className="border-b border-ink/10 text-left text-[11px] font-bold uppercase tracking-wider text-ink/45">
+            <tr className="border-b border-ink/10 bg-paper-soft text-left text-[11px] font-bold uppercase tracking-wider text-ink/60">
               <th scope="col" className="px-4 py-3">Vendor</th>
-              <th scope="col" className="px-4 py-3">Invoices</th>
-              <th scope="col" className="px-4 py-3">Total spend</th>
-              <th scope="col" className="px-4 py-3">Paid on time</th>
+              <th scope="col" className="px-4 py-3 text-right">Invoices</th>
+              <th scope="col" className="px-4 py-3 text-right">Total spend</th>
+              <th scope="col" className="px-4 py-3 text-right">Paid on time</th>
               <th scope="col" className="px-4 py-3">Credit usage</th>
-              <th scope="col" className="px-4 py-3">Quality</th>
-              <th scope="col" className="px-4 py-3">Overall</th>
+              <th scope="col" className="px-4 py-3 text-right">Quality</th>
+              <th scope="col" className="px-4 py-3 text-right">Overall</th>
             </tr>
           </thead>
           <tbody>
             {rows.map(({ vendor, invoices, paid, onTime, totalSpend, usage, overall }) => (
               <tr key={vendor.id} className="border-b border-ink/5 transition-colors last:border-0 hover:bg-paper-soft">
                 <td className="px-4 py-3 font-semibold text-ink">{vendor.name}</td>
-                <td className="num px-4 py-3 text-ink/60">{invoices.length}</td>
-                <td className="num px-4 py-3 font-semibold text-ink">{formatINR(totalSpend)}</td>
-                <td className="num px-4 py-3 text-ink/60">
+                <td className="num px-4 py-3 text-right text-ink/60">{invoices.length}</td>
+                <td className="num px-4 py-3 text-right font-semibold text-ink">{formatINR(totalSpend)}</td>
+                <td className="num px-4 py-3 text-right text-ink/60">
                   {paid.length > 0 ? `${Math.round((onTime.length / paid.length) * 100)}%` : '—'}
                 </td>
                 <td className="px-4 py-3">
@@ -265,9 +265,9 @@ function VendorPerformance() {
                     <span className="num text-xs font-bold text-ink/70">{usage.toFixed(0)}%</span>
                   </div>
                 </td>
-                <td className="num px-4 py-3 text-ink/60">{vendor.ratingQuality.toFixed(1)}★</td>
+                <td className="num px-4 py-3 text-right text-ink/60">{vendor.ratingQuality.toFixed(1)}★</td>
                 <td className="px-4 py-3">
-                  <span className="num flex items-center gap-1 font-bold text-ink">
+                  <span className="num flex items-center justify-end gap-1 font-bold text-ink">
                     <Star size={13} className="fill-amber-400 text-amber-400" aria-hidden="true" />
                     {overall.toFixed(1)}
                   </span>
@@ -285,7 +285,7 @@ function Highlight({ label, value, detail }: { label: string; value: string; det
   return (
     <div className="blueprint relative overflow-hidden rounded-2xl p-4 text-white shadow-lift">
       <div aria-hidden="true" className="pointer-events-none absolute -right-8 -top-12 h-32 w-32 rounded-full bg-amber-glow/15 blur-2xl" />
-      <p className="text-[10px] font-bold uppercase tracking-wider text-white/45">{label}</p>
+      <p className="text-[10px] font-bold uppercase tracking-wider text-white/55">{label}</p>
       <p className="font-display mt-1 text-lg text-amber-glow">{value}</p>
       <p className="num mt-0.5 text-xs text-white/60">{detail}</p>
     </div>
@@ -365,7 +365,7 @@ function CashFlow() {
                   animationDelay: `${idx * 90}ms`,
                 }}
               />
-              <span className="text-[11px] font-bold uppercase tracking-wide text-ink/45">{w.label}</span>
+              <span className="text-[11px] font-bold uppercase tracking-wide text-ink/60">{w.label}</span>
             </div>
           ))}
         </div>
@@ -391,7 +391,7 @@ function CashFlow() {
 function MetricTile({ label, value, warn }: { label: string; value: string; warn?: boolean }) {
   return (
     <div className="panel panel-hover p-4">
-      <p className="text-[11px] font-bold uppercase tracking-wider text-ink/45">{label}</p>
+      <p className="text-[11px] font-bold uppercase tracking-wider text-ink/60">{label}</p>
       <p className={clsx('num mt-1.5 text-xl font-bold sm:text-2xl', warn ? 'text-red-600' : 'text-ink')}>{value}</p>
     </div>
   );

@@ -8,7 +8,6 @@
   --paper: #f6f4ef;
   --accent: #e0a22b;
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 html {

@@ -165,7 +165,7 @@ export default function Login({ onBack }: { onBack?: () => void }) {
                   type="button"
                   onClick={() => setShowPw((s) => !s)}
                   aria-label={showPw ? 'Hide password' : 'Show password'}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer rounded-lg p-1.5 text-ink/45 transition-colors hover:bg-ink/5 hover:text-ink focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer rounded-lg p-1.5 text-ink/60 transition-colors hover:bg-ink/5 hover:text-ink focus:outline-none focus:ring-2 focus:ring-amber-500"
                 >
                   {showPw ? <EyeOff size={17} /> : <Eye size={17} />}
                 </button>
@@ -183,7 +183,7 @@ export default function Login({ onBack }: { onBack?: () => void }) {
 
           {/* Demo accounts */}
           <div className="mt-7">
-            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink/45">
+            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink/60">
               Demo accounts · password{' '}
               <code className="num rounded bg-ink/[0.06] px-1.5 py-0.5 text-ink/70">{DEMO_PASSWORD}</code>
             </p>

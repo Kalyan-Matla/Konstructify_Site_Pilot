@@ -305,7 +305,7 @@ export default function Layout() {
                     resetData();
                     setMoreOpen(false);
                   }}
-                  className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold text-ink/45 transition-colors hover:bg-ink/5 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold text-ink/60 transition-colors hover:bg-ink/5 focus:outline-none focus:ring-2 focus:ring-amber-500"
                 >
                   <RotateCcw size={18} aria-hidden="true" />
                   Reset demo data

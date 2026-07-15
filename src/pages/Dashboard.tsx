@@ -197,13 +197,13 @@ export default function Dashboard() {
       <div className="panel mb-8 animate-fade-up overflow-x-auto">
         <table className="w-full min-w-[560px] text-sm">
           <thead>
-            <tr className="border-b border-ink/10 text-left text-[11px] font-bold uppercase tracking-wider text-ink/45">
+            <tr className="border-b border-ink/10 bg-paper-soft text-left text-[11px] font-bold uppercase tracking-wider text-ink/60">
               <th scope="col" className="px-4 py-3">Vendor</th>
               <th scope="col" className="px-4 py-3">Category</th>
-              <th scope="col" className="px-4 py-3">Credit used</th>
-              <th scope="col" className="px-4 py-3">&lt;30d</th>
-              <th scope="col" className="px-4 py-3">30–60d</th>
-              <th scope="col" className="px-4 py-3">Status</th>
+              <th scope="col" className="px-4 py-3 text-right">Credit used</th>
+              <th scope="col" className="px-4 py-3 text-right">&lt;30d</th>
+              <th scope="col" className="px-4 py-3 text-right">30–60d</th>
+              <th scope="col" className="px-4 py-3 text-right">Status</th>
             </tr>
           </thead>
           <tbody>
@@ -220,12 +220,12 @@ export default function Dashboard() {
                     </Link>
                   </td>
                   <td className="px-4 py-3 capitalize text-ink/55">{v.category}</td>
-                  <td className="num px-4 py-3 text-ink">
+                  <td className="num px-4 py-3 text-right text-ink">
                     {formatINR(used)} / {formatINR(v.creditLimit)}
                   </td>
-                  <td className="num px-4 py-3 text-ink/55">{formatINR(aging.b0to30)}</td>
-                  <td className="num px-4 py-3 text-ink/55">{formatINR(aging.b30to60)}</td>
-                  <td className="px-4 py-3">
+                  <td className="num px-4 py-3 text-right text-ink/55">{formatINR(aging.b0to30)}</td>
+                  <td className="num px-4 py-3 text-right text-ink/55">{formatINR(aging.b30to60)}</td>
+                  <td className="px-4 py-3 text-right">
                     {overdue ? (
                       <Badge tone="red">overdue</Badge>
                     ) : health === 'maxed' ? (
@@ -254,7 +254,7 @@ export default function Dashboard() {
             {a.message}
           </li>
         ))}
-        {state.activity.length === 0 && <li className="text-ink/45">No activity yet.</li>}
+        {state.activity.length === 0 && <li className="text-ink/60">No activity yet.</li>}
       </ul>
     </div>
   );
@@ -294,7 +294,7 @@ function StatCard({
   return (
     <div ref={tiltRef} className="tilt panel p-4 sm:p-5">
       <div className="tilt-inner">
-        <p className="text-[11px] font-bold uppercase tracking-wider text-ink/45">{label}</p>
+        <p className="text-[11px] font-bold uppercase tracking-wider text-ink/60">{label}</p>
         <p className="num mt-1.5 text-2xl font-bold text-ink sm:text-3xl">
           {rupees !== null ? formatINR(Math.round(animated)) : plain}
         </p>
