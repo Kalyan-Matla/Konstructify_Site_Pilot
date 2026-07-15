@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { addDays, format, parseISO } from 'date-fns';
-import { CheckCircle2, Plus, Send, Trash2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, FileText, Plus, Send, Trash2 } from 'lucide-react';
 import type { Invoice, InvoiceStatus, PaymentMode, Vendor } from '../types';
 import { useApp } from '../contexts/AppContext';
 import {
@@ -102,7 +102,12 @@ export default function Payments() {
       </div>
 
       {invoices.length === 0 ? (
-        <EmptyState message="No invoices match this filter." />
+        <EmptyState
+          icon={FileText}
+          title="No invoices here"
+          message="Log a vendor bill against a project — it draws down their credit and schedules the due date."
+          action={{ label: 'New invoice', onClick: () => setCreating(true) }}
+        />
       ) : (
         <div className="stagger space-y-2">
           {invoices.map((i) => {
@@ -112,19 +117,19 @@ export default function Payments() {
               <div key={i.id} className="panel panel-hover p-3 sm:p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="font-semibold text-gray-900">
+                    <p className="font-semibold text-ink">
                       {i.invoiceNumber} · {vendor?.name ?? 'Unknown vendor'}
                     </p>
-                    <p className="truncate text-xs text-gray-500">
+                    <p className="truncate text-xs text-ink/55">
                       {project?.name ?? 'No project'} · {i.notes || 'no notes'}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-base font-bold text-gray-900">{formatINR(i.amount)}</span>
+                    <span className="text-base font-bold text-ink">{formatINR(i.amount)}</span>
                     {statusBadge(i)}
                   </div>
                 </div>
-                <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-600">
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-ink/60">
                   <span>
                     Invoiced {formatDate(i.invoiceDate)} · Due {formatDate(i.dueDate)}
                     {i.paymentMode && ` · ${i.paymentMode}`}
@@ -271,16 +276,21 @@ function InvoiceForm({ onClose }: { onClose: () => void }) {
         </Field>
 
         {vendor && (
-          <p className="mb-2 text-xs text-gray-600">
+          <p className="mb-2 text-xs text-ink/60">
             {vendor.name}: {formatINR(available)} credit available ({vendor.paymentTerms} terms).
           </p>
         )}
         {exceeds && (
-          <div className="mb-3 rounded border-l-4 border-orange-400 bg-orange-50 p-3 text-sm text-orange-800" role="alert">
-            This invoice exceeds {vendor?.name}'s available credit by {formatINR(amt - available)}.
-            {alternative
-              ? ` 💡 ${alternative.name} has ${formatINR(creditAvailable(alternative, state.invoices))} available in the same category — consider splitting the order.`
-              : ' No same-category vendor has enough free credit — consider paying early to free credit.'}
+          <div className="mb-3 flex gap-2.5 rounded-xl bg-orange-50 p-3 text-sm text-orange-900 ring-1 ring-inset ring-orange-500/20" role="alert">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-orange-100 text-orange-600">
+              <AlertTriangle size={14} aria-hidden="true" />
+            </span>
+            <span>
+              This invoice exceeds {vendor?.name}'s available credit by {formatINR(amt - available)}.
+              {alternative
+                ? ` ${alternative.name} has ${formatINR(creditAvailable(alternative, state.invoices))} available in the same category — consider splitting the order.`
+                : ' No same-category vendor has enough free credit — consider paying early to free credit.'}
+            </span>
           </div>
         )}
 
@@ -322,14 +332,14 @@ function PaymentModal({ invoice, onClose }: { invoice: Invoice; onClose: () => v
   return (
     <Modal title={`Pay invoice ${invoice.invoiceNumber}`} onClose={onClose}>
       <form onSubmit={schedule}>
-        <p className="text-sm text-gray-700">
+        <p className="text-sm text-ink/80">
           <strong>{vendor?.name}</strong> · {formatINR(invoice.amount)} · due {formatDate(invoice.dueDate)}
         </p>
         <fieldset className="mt-4">
-          <legend className="mb-2 text-sm font-medium text-gray-700">Payment mode</legend>
+          <legend className="mb-2 text-sm font-medium text-ink/80">Payment mode</legend>
           <div className="stagger space-y-2">
             {modes.map((m) => (
-              <label key={m.value} className="flex cursor-pointer items-center gap-3 rounded-md border border-gray-200 p-3 has-[:checked]:border-amber-500 has-[:checked]:bg-amber-50">
+              <label key={m.value} className="flex cursor-pointer items-center gap-3 rounded-md border border-ink/10 p-3 has-[:checked]:border-amber-500 has-[:checked]:bg-amber-50">
                 <input
                   type="radio"
                   name="pay-mode"
@@ -338,8 +348,8 @@ function PaymentModal({ invoice, onClose }: { invoice: Invoice; onClose: () => v
                   onChange={() => setMode(m.value)}
                   className="h-4 w-4 accent-amber-500"
                 />
-                <span className="text-sm font-semibold text-gray-900">{m.label}</span>
-                <span className="text-xs text-gray-500">{m.hint}</span>
+                <span className="text-sm font-semibold text-ink">{m.label}</span>
+                <span className="text-xs text-ink/55">{m.hint}</span>
               </label>
             ))}
           </div>

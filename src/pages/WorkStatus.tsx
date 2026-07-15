@@ -1,5 +1,5 @@
 import { useRef, useState, type ChangeEvent, type FormEvent } from 'react';
-import { Camera, CheckCircle2, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Camera, CheckCircle2, HardHat, Pencil, Plus, Trash2 } from 'lucide-react';
 import type { TaskPhoto, TaskStatus, WorkTask } from '../types';
 import { useApp } from '../contexts/AppContext';
 import {
@@ -109,7 +109,12 @@ export default function WorkStatus() {
       </div>
 
       {tasks.length === 0 ? (
-        <EmptyState message="No tasks match. Create one with “New task”." />
+        <EmptyState
+          icon={HardHat}
+          title="No tasks yet"
+          message="Add a site task to track progress, capture photos and flag delays before they slip."
+          action={{ label: 'New task', onClick: () => setEditing('new') }}
+        />
       ) : (
         <div className="stagger grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {tasks.map((t) => {
@@ -120,7 +125,7 @@ export default function WorkStatus() {
                   <button
                     type="button"
                     onClick={() => setViewing(t.id)}
-                    className="text-left font-semibold text-gray-900 hover:text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className="text-left font-semibold text-ink hover:text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
                   >
                     {t.name}
                   </button>
@@ -132,23 +137,23 @@ export default function WorkStatus() {
                     <Badge tone={t.status === 'in-progress' ? 'blue' : 'gray'}>{t.status}</Badge>
                   )}
                 </div>
-                <p className="mt-0.5 text-xs text-gray-500">
+                <p className="mt-0.5 text-xs text-ink/55">
                   {t.phase} · {t.assignedTo} · {t.photos.length} photo{t.photos.length === 1 ? '' : 's'}
                 </p>
                 <div className="mt-2 flex items-center gap-2">
                   <div className="flex-1">
                     <ProgressBar percent={t.percentComplete} tone={progressTone(t.percentComplete)} />
                   </div>
-                  <span className="text-xs font-semibold text-gray-700">{t.percentComplete}%</span>
+                  <span className="text-xs font-semibold text-ink/80">{t.percentComplete}%</span>
                 </div>
-                <p className="mt-1.5 text-xs text-gray-500">Due {formatDate(t.dueDate)}</p>
+                <p className="mt-1.5 text-xs text-ink/55">Due {formatDate(t.dueDate)}</p>
                 <div className="mt-2 flex items-center justify-between">
                   <SyncBadge entity="task" id={t.id} />
                   <div className="flex gap-1">
-                    <button type="button" onClick={() => setEditing(t)} aria-label={`Edit ${t.name}`} className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    <button type="button" onClick={() => setEditing(t)} aria-label={`Edit ${t.name}`} className="rounded p-1.5 text-ink/55 hover:bg-paper-soft hover:text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
                       <Pencil size={16} />
                     </button>
-                    <button type="button" onClick={() => setDeleting(t)} aria-label={`Delete ${t.name}`} className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    <button type="button" onClick={() => setDeleting(t)} aria-label={`Delete ${t.name}`} className="rounded p-1.5 text-ink/55 hover:bg-paper-soft hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -318,17 +323,17 @@ function TaskDetail({ task, onClose }: { task: WorkTask; onClose: () => void }) 
 
   return (
     <Modal title={task.name} onClose={onClose}>
-      <p className="text-sm text-gray-600">
+      <p className="text-sm text-ink/60">
         {project?.name ?? 'No project'} · {task.phase} · {task.assignedTo}
       </p>
-      <p className="mt-0.5 text-sm text-gray-600">{task.description || 'No description.'}</p>
+      <p className="mt-0.5 text-sm text-ink/60">{task.description || 'No description.'}</p>
       <p className="mt-1 text-sm">
         Due {formatDate(task.dueDate)}{' '}
         {overdue ? <Badge tone="red">{-daysUntil(task.dueDate)}d overdue</Badge> : task.status !== 'complete' && <Badge tone="green">on track</Badge>}
       </p>
 
       <div className="mt-4">
-        <label htmlFor="tk-pct" className="mb-1 block text-sm font-medium text-gray-700">
+        <label htmlFor="tk-pct" className="mb-1 block text-sm font-medium text-ink/80">
           Progress: {task.percentComplete}%
         </label>
         <input
@@ -351,7 +356,7 @@ function TaskDetail({ task, onClose }: { task: WorkTask; onClose: () => void }) 
       )}
 
       <div className="mt-4 flex items-center justify-between">
-        <h3 className="text-sm font-bold text-gray-900">Photos ({task.photos.length})</h3>
+        <h3 className="text-sm font-bold text-ink">Photos ({task.photos.length})</h3>
         <div>
           <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={addPhoto} aria-label="Upload site photo" />
           <button
@@ -365,13 +370,13 @@ function TaskDetail({ task, onClose }: { task: WorkTask; onClose: () => void }) 
       </div>
       {uploadError && <p role="alert" className="mt-1 text-xs text-red-600">{uploadError}</p>}
       {task.photos.length === 0 ? (
-        <p className="mt-2 text-sm text-gray-500">No photos yet — capture progress from the site.</p>
+        <p className="mt-2 text-sm text-ink/55">No photos yet — capture progress from the site.</p>
       ) : (
         <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
           {task.photos.map((p) => (
             <figure key={p.id} className="relative">
               <img src={p.dataUrl} alt={p.caption || 'Site photo'} className="h-24 w-full rounded object-cover" />
-              <figcaption className="mt-0.5 truncate text-[10px] text-gray-500">
+              <figcaption className="mt-0.5 truncate text-[10px] text-ink/55">
                 {formatDate(p.timestamp)}
               </figcaption>
               <button

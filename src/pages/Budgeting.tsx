@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { IndianRupee, Pencil, Plus, Trash2 } from 'lucide-react';
 import type { BudgetItem } from '../types';
 import { useApp } from '../contexts/AppContext';
 import {
@@ -49,7 +49,7 @@ export default function Budgeting() {
       />
 
       <div className="mb-4">
-        <label htmlFor="bq-project" className="mr-2 text-sm text-gray-600">Project</label>
+        <label htmlFor="bq-project" className="mr-2 text-sm text-ink/60">Project</label>
         <select
           id="bq-project"
           className="rounded-xl border border-ink/15 bg-white px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
@@ -66,7 +66,7 @@ export default function Budgeting() {
         <Summary label="BOQ estimate" value={formatINR(totalEstimate)} />
         <Summary label="Actual spend" value={formatINR(totalActual)} />
         <div className="panel panel-hover p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Variance</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-ink/55">Variance</p>
           <p className={`mt-1 text-lg font-bold sm:text-xl ${totalVariance > 0 ? 'text-red-600' : 'text-green-700'}`}>
             {totalVariance > 0 ? '+' : ''}{formatINR(totalVariance)}
           </p>
@@ -76,19 +76,24 @@ export default function Budgeting() {
       {ai && !aiDismissed && <AICard suggestion={ai} onDismiss={() => setAiDismissed(true)} />}
 
       {items.length === 0 ? (
-        <EmptyState message={`No BOQ items for ${project?.name ?? 'this project'} yet.`} />
+        <EmptyState
+          icon={IndianRupee}
+          title="No BOQ items yet"
+          message={`Add a bill-of-quantities line for ${project?.name ?? 'this project'} to track estimate against actual spend.`}
+          action={{ label: 'New BOQ item', onClick: () => setEditing('new') }}
+        />
       ) : (
         <div className="overflow-x-auto panel">
           <table className="w-full min-w-[680px] text-sm">
             <thead>
-              <tr className="border-b border-gray-200 text-left text-xs uppercase tracking-wide text-gray-500">
-                <th scope="col" className="px-3 py-2">Item</th>
-                <th scope="col" className="px-3 py-2">Qty</th>
-                <th scope="col" className="px-3 py-2">Rate</th>
-                <th scope="col" className="px-3 py-2">Estimate</th>
-                <th scope="col" className="px-3 py-2">Actual</th>
-                <th scope="col" className="px-3 py-2">Variance</th>
-                <th scope="col" className="px-3 py-2"><span className="sr-only">Actions</span></th>
+              <tr className="border-b border-ink/10 bg-paper-soft text-left text-[11px] font-bold uppercase tracking-wider text-ink/45">
+                <th scope="col" className="px-4 py-2.5">Item</th>
+                <th scope="col" className="px-4 py-2.5 text-right">Qty</th>
+                <th scope="col" className="px-4 py-2.5 text-right">Rate</th>
+                <th scope="col" className="px-4 py-2.5 text-right">Estimate</th>
+                <th scope="col" className="px-4 py-2.5 text-right">Actual</th>
+                <th scope="col" className="px-4 py-2.5 text-right">Variance</th>
+                <th scope="col" className="px-4 py-2.5"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody>
@@ -98,16 +103,16 @@ export default function Budgeting() {
                 const pct = estimate > 0 ? (variance / estimate) * 100 : 0;
                 const overrun = estimate > 0 && variance > 0.1 * estimate;
                 return (
-                  <tr key={b.id} className="border-b border-gray-100 last:border-0">
-                    <td className="px-3 py-2">
-                      <p className="font-medium text-gray-900">{b.description}</p>
+                  <tr key={b.id} className="border-b border-ink/10 transition-colors last:border-0 hover:bg-paper-soft">
+                    <td className="px-4 py-2.5">
+                      <p className="font-medium text-ink">{b.description}</p>
                       <SyncBadge entity="budgetItem" id={b.id} />
                     </td>
-                    <td className="px-3 py-2 text-gray-600">{b.quantity} {b.unit}</td>
-                    <td className="px-3 py-2 text-gray-600">₹{b.unitRate.toLocaleString('en-IN')}</td>
-                    <td className="px-3 py-2 text-gray-900">{formatINR(estimate)}</td>
-                    <td className="px-3 py-2 text-gray-900">{formatINR(b.actualSpend)}</td>
-                    <td className="px-3 py-2">
+                    <td className="num px-4 py-2.5 text-right text-ink/60">{b.quantity} {b.unit}</td>
+                    <td className="num px-4 py-2.5 text-right text-ink/60">₹{b.unitRate.toLocaleString('en-IN')}</td>
+                    <td className="num px-4 py-2.5 text-right text-ink">{formatINR(estimate)}</td>
+                    <td className="num px-4 py-2.5 text-right text-ink">{formatINR(b.actualSpend)}</td>
+                    <td className="px-4 py-2.5 text-right">
                       {b.actualSpend === 0 ? (
                         <Badge tone="gray">not started</Badge>
                       ) : overrun ? (
@@ -118,12 +123,12 @@ export default function Budgeting() {
                         <Badge tone="green">{pct.toFixed(0)}%</Badge>
                       )}
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-4 py-2.5 text-right">
                       <div className="flex gap-1">
-                        <button type="button" onClick={() => setEditing(b)} aria-label={`Edit ${b.description}`} className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                        <button type="button" onClick={() => setEditing(b)} aria-label={`Edit ${b.description}`} className="rounded p-1.5 text-ink/55 hover:bg-paper-soft hover:text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
                           <Pencil size={15} />
                         </button>
-                        <button type="button" onClick={() => setDeleting(b)} aria-label={`Delete ${b.description}`} className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                        <button type="button" onClick={() => setDeleting(b)} aria-label={`Delete ${b.description}`} className="rounded p-1.5 text-ink/55 hover:bg-paper-soft hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
                           <Trash2 size={15} />
                         </button>
                       </div>
@@ -166,8 +171,8 @@ export default function Budgeting() {
 function Summary({ label, value }: { label: string; value: string }) {
   return (
     <div className="panel panel-hover p-4">
-      <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{label}</p>
-      <p className="mt-1 text-lg font-bold text-gray-900 sm:text-xl">{value}</p>
+      <p className="text-xs font-medium uppercase tracking-wide text-ink/55">{label}</p>
+      <p className="mt-1 text-lg font-bold text-ink sm:text-xl">{value}</p>
     </div>
   );
 }
@@ -233,7 +238,7 @@ function BudgetForm({
             <input id="bq-actual" type="number" min="0" className={inputCls} value={actualSpend} onChange={(e) => setActualSpend(e.target.value)} />
           </Field>
         </div>
-        <p className="mb-2 text-sm text-gray-600">
+        <p className="mb-2 text-sm text-ink/60">
           Total estimate: <strong>{formatINR(qty * rate)}</strong>
         </p>
         <div className="mt-2 flex justify-end gap-2">

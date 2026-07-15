@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { CheckCircle2, Pencil, Plus, Trash2 } from 'lucide-react';
+import { CheckCircle2, ClipboardList, Pencil, Plus, Trash2 } from 'lucide-react';
 import type { Priority, TaskStatus, WorkOrder } from '../types';
 import { useApp } from '../contexts/AppContext';
 import {
@@ -65,7 +65,12 @@ export default function WorkOrders() {
       </div>
 
       {orders.length === 0 ? (
-        <EmptyState message="No work orders match this filter." />
+        <EmptyState
+          icon={ClipboardList}
+          title="No work orders"
+          message="Create a work order to assign a task, set its priority and track the handoff to completion."
+          action={{ label: 'New work order', onClick: () => setEditing('new') }}
+        />
       ) : (
         <div className="stagger space-y-2">
           {orders.map((w) => {
@@ -75,10 +80,10 @@ export default function WorkOrders() {
               <div key={w.id} className="panel panel-hover p-3 sm:p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="font-semibold text-gray-900">
+                    <p className="font-semibold text-ink">
                       {w.orderNumber} · {w.taskName}
                     </p>
-                    <p className="truncate text-xs text-gray-500">
+                    <p className="truncate text-xs text-ink/55">
                       {project?.name ?? 'No project'} · assigned to {w.assignee}
                     </p>
                   </div>
@@ -95,7 +100,7 @@ export default function WorkOrders() {
                     )}
                   </div>
                 </div>
-                <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-600">
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-ink/60">
                   <span>Due {formatDate(w.dueDate)}</span>
                   <SyncBadge entity="workOrder" id={w.id} />
                 </div>

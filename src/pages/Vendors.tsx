@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Pencil, Phone, Plus, Star, Trash2 } from 'lucide-react';
+import { Pencil, Phone, Plus, Star, Trash2, Users } from 'lucide-react';
 import type { PaymentTerms, Vendor, VendorCategory } from '../types';
 import { useApp } from '../contexts/AppContext';
 import {
@@ -75,7 +75,7 @@ export default function Vendors() {
       />
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <label htmlFor="vf-cat" className="text-sm text-gray-600">Category</label>
+        <label htmlFor="vf-cat" className="text-sm text-ink/60">Category</label>
         <select id="vf-cat" className="rounded-xl border border-ink/15 bg-white px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" value={category} onChange={(e) => setCategory(e.target.value as CategoryFilter)}>
           <option value="all">All</option>
           <option value="material">Material</option>
@@ -83,7 +83,7 @@ export default function Vendors() {
           <option value="labor">Labor</option>
           <option value="equipment">Equipment</option>
         </select>
-        <label htmlFor="vf-health" className="ml-2 text-sm text-gray-600">Credit</label>
+        <label htmlFor="vf-health" className="ml-2 text-sm text-ink/60">Credit</label>
         <select id="vf-health" className="rounded-xl border border-ink/15 bg-white px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" value={health} onChange={(e) => setHealth(e.target.value as HealthFilter)}>
           <option value="all">All</option>
           <option value="healthy">Healthy (&lt;50%)</option>
@@ -94,7 +94,12 @@ export default function Vendors() {
       </div>
 
       {vendors.length === 0 ? (
-        <EmptyState message="No vendors match. Adjust filters or add a vendor." />
+        <EmptyState
+          icon={Users}
+          title="No vendors here"
+          message="Add a supplier with their credit line and payment terms to start tracking exposure."
+          action={{ label: 'Add vendor', onClick: () => setEditing('new') }}
+        />
       ) : (
         <div className="stagger grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {vendors.map((v) => {
@@ -108,17 +113,17 @@ export default function Vendors() {
                   <button
                     type="button"
                     onClick={() => setViewing(v)}
-                    className="text-left text-base font-semibold text-gray-900 hover:text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className="text-left text-base font-semibold text-ink hover:text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
                   >
                     {v.name}
                   </button>
                   {healthBadge(h, overdue)}
                 </div>
-                <p className="text-sm capitalize text-gray-500">{v.category} · {v.paymentTerms} terms</p>
+                <p className="text-sm capitalize text-ink/55">{v.category} · {v.paymentTerms} terms</p>
                 <div className="mt-3 space-y-1">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Credit used</span>
-                    <span className="font-semibold text-gray-900">
+                    <span className="text-ink/60">Credit used</span>
+                    <span className="font-semibold text-ink">
                       {formatINR(used)} / {formatINR(v.creditLimit)}
                     </span>
                   </div>
@@ -130,7 +135,7 @@ export default function Vendors() {
                     <a
                       href={`tel:${v.phone}`}
                       aria-label={`Call ${v.name}`}
-                      className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-green-700 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      className="rounded p-1.5 text-ink/55 hover:bg-paper-soft hover:text-green-700 focus:outline-none focus:ring-2 focus:ring-amber-500"
                     >
                       <Phone size={16} />
                     </a>
@@ -138,7 +143,7 @@ export default function Vendors() {
                       type="button"
                       onClick={() => setEditing(v)}
                       aria-label={`Edit ${v.name}`}
-                      className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      className="rounded p-1.5 text-ink/55 hover:bg-paper-soft hover:text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
                     >
                       <Pencil size={16} />
                     </button>
@@ -146,7 +151,7 @@ export default function Vendors() {
                       type="button"
                       onClick={() => setDeleting(v)}
                       aria-label={`Delete ${v.name}`}
-                      className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      className="rounded p-1.5 text-ink/55 hover:bg-paper-soft hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
                     >
                       <Trash2 size={16} />
                     </button>
@@ -307,24 +312,24 @@ function VendorDetail({ vendor, onClose }: { vendor: Vendor; onClose: () => void
 
   return (
     <Modal title={vendor.name} onClose={onClose}>
-      <p className="text-sm capitalize text-gray-600">
+      <p className="text-sm capitalize text-ink/60">
         {vendor.category} · {vendor.paymentTerms} terms · GST {vendor.gstId || '—'}
       </p>
-      <p className="mt-0.5 text-sm text-gray-600">
+      <p className="mt-0.5 text-sm text-ink/60">
         📞 {vendor.phone} {vendor.email && `· ✉️ ${vendor.email}`}
       </p>
-      <p className="mt-0.5 text-sm text-gray-600">
+      <p className="mt-0.5 text-sm text-ink/60">
         Bank {vendor.bankAccount || '—'} · IFSC {vendor.bankIfsc || '—'}
       </p>
-      <p className="mt-1 flex items-center gap-1 text-sm text-gray-700">
+      <p className="mt-1 flex items-center gap-1 text-sm text-ink/80">
         <Star size={14} className="text-yellow-500" aria-hidden="true" />
         Quality {vendor.ratingQuality.toFixed(1)} · Delivery {vendor.ratingDelivery.toFixed(1)}
       </p>
 
-      <div className="mt-4 rounded-lg border border-gray-200 p-3">
+      <div className="mt-4 rounded-lg border border-ink/10 p-3">
         <div className="flex justify-between text-sm">
-          <span className="text-gray-600">Credit used ({pct.toFixed(0)}%)</span>
-          <span className="font-semibold text-gray-900">
+          <span className="text-ink/60">Credit used ({pct.toFixed(0)}%)</span>
+          <span className="font-semibold text-ink">
             {formatINR(used)} / {formatINR(vendor.creditLimit)}
           </span>
         </div>
@@ -339,9 +344,9 @@ function VendorDetail({ vendor, onClose }: { vendor: Vendor; onClose: () => void
             ['60–90d', aging.b60to90],
             ['90d+', aging.b90plus],
           ].map(([label, amt]) => (
-            <div key={String(label)} className="rounded bg-gray-50 p-1.5">
-              <p className="text-gray-500">{label}</p>
-              <p className="font-semibold text-gray-900">{formatINR(Number(amt))}</p>
+            <div key={String(label)} className="rounded bg-paper-soft p-1.5">
+              <p className="text-ink/55">{label}</p>
+              <p className="font-semibold text-ink">{formatINR(Number(amt))}</p>
             </div>
           ))}
         </div>
@@ -370,15 +375,15 @@ function VendorDetail({ vendor, onClose }: { vendor: Vendor; onClose: () => void
         </button>
       </div>
 
-      <h3 className="mt-4 text-sm font-bold text-gray-900">Invoice history (last 10)</h3>
-      <ul className="mt-1 divide-y divide-gray-100 text-sm">
+      <h3 className="mt-4 text-sm font-bold text-ink">Invoice history (last 10)</h3>
+      <ul className="mt-1 divide-y divide-ink/10 text-sm">
         {invoices.map((i) => (
           <li key={i.id} className="flex items-center justify-between py-1.5">
-            <span className="text-gray-800">
+            <span className="text-ink">
               {i.invoiceNumber} · {formatDate(i.invoiceDate)}
             </span>
             <span className="flex items-center gap-2">
-              <span className="font-medium text-gray-900">{formatINR(i.amount)}</span>
+              <span className="font-medium text-ink">{formatINR(i.amount)}</span>
               {i.status === 'paid' ? (
                 <Badge tone="green">paid</Badge>
               ) : i.status === 'payment-sent' ? (
@@ -389,7 +394,7 @@ function VendorDetail({ vendor, onClose }: { vendor: Vendor; onClose: () => void
             </span>
           </li>
         ))}
-        {invoices.length === 0 && <li className="py-1.5 text-gray-500">No invoices yet.</li>}
+        {invoices.length === 0 && <li className="py-1.5 text-ink/55">No invoices yet.</li>}
       </ul>
     </Modal>
   );

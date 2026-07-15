@@ -1,4 +1,4 @@
-import { Sparkles, X } from 'lucide-react';
+import { Sparkles, X, type LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import type { AISuggestion, EntityKind } from '../types';
@@ -294,10 +294,31 @@ export function AICard({
   );
 }
 
-export function EmptyState({ message }: { message: string }) {
+export function EmptyState({
+  icon: Icon,
+  title,
+  message,
+  action,
+}: {
+  icon?: LucideIcon;
+  title?: string;
+  message: string;
+  action?: { label: string; onClick: () => void };
+}) {
   return (
-    <div className="animate-fade-up rounded-2xl border-2 border-dashed border-ink/15 bg-white/50 p-10 text-center text-sm text-ink/50">
-      {message}
+    <div className="flex animate-fade-up flex-col items-center rounded-2xl border border-dashed border-ink/20 bg-white/60 px-6 py-14 text-center">
+      {Icon && (
+        <span className="mb-3.5 flex h-12 w-12 items-center justify-center rounded-2xl bg-ink text-amber-glow shadow-raise">
+          <Icon size={22} aria-hidden="true" />
+        </span>
+      )}
+      {title && <p className="font-display text-lg text-ink">{title}</p>}
+      <p className="mt-1 max-w-xs text-sm text-ink/55">{message}</p>
+      {action && (
+        <button type="button" onClick={action.onClick} className="btn-primary btn-sm mt-4">
+          {action.label}
+        </button>
+      )}
     </div>
   );
 }

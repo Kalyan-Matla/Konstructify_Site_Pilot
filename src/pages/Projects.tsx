@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from 'react';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { FolderOpen, Pencil, Plus, Trash2 } from 'lucide-react';
 import type { Project, ProjectStatus } from '../types';
 import { useApp } from '../contexts/AppContext';
 import {
@@ -62,7 +62,12 @@ export default function Projects() {
       </div>
 
       {projects.length === 0 ? (
-        <EmptyState message="No projects match this filter. Create one with “New project”." />
+        <EmptyState
+          icon={FolderOpen}
+          title="No projects to show"
+          message="Spin up a project with its budget and timeline to start tracking spend and progress."
+          action={{ label: 'New project', onClick: () => setEditing('new') }}
+        />
       ) : (
         <div className="stagger grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {projects.map((p) => {
@@ -75,7 +80,7 @@ export default function Projects() {
                   <button
                     type="button"
                     onClick={() => setViewing(p)}
-                    className="text-left font-semibold text-gray-900 hover:text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className="text-left font-semibold text-ink hover:text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
                   >
                     {p.name}
                   </button>
@@ -83,14 +88,14 @@ export default function Projects() {
                     {over ? 'overrun' : p.status}
                   </Badge>
                 </div>
-                <p className="mt-1 text-sm text-gray-600">{p.location} · {p.clientName}</p>
-                <p className="mt-2 text-sm text-gray-900">
+                <p className="mt-1 text-sm text-ink/60">{p.location} · {p.clientName}</p>
+                <p className="mt-2 text-sm text-ink">
                   {formatINR(spent)} / {formatINR(p.budget)}
                 </p>
                 <div className="mt-1.5">
                   <ProgressBar percent={p.budget > 0 ? (spent / p.budget) * 100 : 0} />
                 </div>
-                <p className="mt-2 text-xs text-gray-500">
+                <p className="mt-2 text-xs text-ink/55">
                   {formatDate(p.startDate)} → {formatDate(p.endDate)} ·{' '}
                   {remaining >= 0 ? `${remaining}d left` : `${-remaining}d over`}
                 </p>
@@ -101,7 +106,7 @@ export default function Projects() {
                       type="button"
                       onClick={() => setEditing(p)}
                       aria-label={`Edit ${p.name}`}
-                      className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      className="rounded p-1.5 text-ink/55 hover:bg-paper-soft hover:text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
                     >
                       <Pencil size={16} />
                     </button>
@@ -109,7 +114,7 @@ export default function Projects() {
                       type="button"
                       onClick={() => setDeleting(p)}
                       aria-label={`Delete ${p.name}`}
-                      className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      className="rounded p-1.5 text-ink/55 hover:bg-paper-soft hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
                     >
                       <Trash2 size={16} />
                     </button>
@@ -263,37 +268,37 @@ function ProjectDetail({ project, onClose }: { project: Project; onClose: () => 
 
   return (
     <Modal title={project.name} onClose={onClose}>
-      <p className="text-sm text-gray-600">
+      <p className="text-sm text-ink/60">
         {project.location} · {project.clientName}
       </p>
-      <p className="mt-1 text-sm text-gray-600">
+      <p className="mt-1 text-sm text-ink/60">
         {formatDate(project.startDate)} → {formatDate(project.endDate)} ·{' '}
         {remaining >= 0 ? `${remaining} days remaining` : `${-remaining} days past end`}
       </p>
 
-      <h3 className="mt-4 text-sm font-bold text-gray-900">Budget snapshot</h3>
+      <h3 className="mt-4 text-sm font-bold text-ink">Budget snapshot</h3>
       <div className="mt-1 grid grid-cols-3 gap-2 text-sm">
-        <div className="rounded bg-gray-50 p-2">
-          <p className="text-xs text-gray-500">BOQ estimate</p>
+        <div className="rounded bg-paper-soft p-2">
+          <p className="text-xs text-ink/55">BOQ estimate</p>
           <p className="font-semibold">{formatINR(estimate)}</p>
         </div>
-        <div className="rounded bg-gray-50 p-2">
-          <p className="text-xs text-gray-500">Actual spend</p>
+        <div className="rounded bg-paper-soft p-2">
+          <p className="text-xs text-ink/55">Actual spend</p>
           <p className="font-semibold">{formatINR(spent)}</p>
         </div>
-        <div className="rounded bg-gray-50 p-2">
-          <p className="text-xs text-gray-500">Sanctioned</p>
+        <div className="rounded bg-paper-soft p-2">
+          <p className="text-xs text-ink/55">Sanctioned</p>
           <p className="font-semibold">{formatINR(project.budget)}</p>
         </div>
       </div>
 
-      <h3 className="mt-4 text-sm font-bold text-gray-900">Phases</h3>
+      <h3 className="mt-4 text-sm font-bold text-ink">Phases</h3>
       <div className="mt-1 space-y-2">
         {phases.map(({ phase, tasks, pct }) => (
           <div key={phase}>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-700">{phase}</span>
-              <span className="text-gray-500">
+              <span className="text-ink/80">{phase}</span>
+              <span className="text-ink/55">
                 {tasks.length} task{tasks.length === 1 ? '' : 's'} · {pct.toFixed(0)}%
               </span>
             </div>
@@ -302,15 +307,15 @@ function ProjectDetail({ project, onClose }: { project: Project; onClose: () => 
         ))}
       </div>
 
-      <h3 className="mt-4 text-sm font-bold text-gray-900">Vendors on this project</h3>
+      <h3 className="mt-4 text-sm font-bold text-ink">Vendors on this project</h3>
       {vendorRows.length === 0 ? (
-        <p className="mt-1 text-sm text-gray-500">No invoices yet.</p>
+        <p className="mt-1 text-sm text-ink/55">No invoices yet.</p>
       ) : (
-        <ul className="mt-1 divide-y divide-gray-100 text-sm">
+        <ul className="mt-1 divide-y divide-ink/10 text-sm">
           {vendorRows.map(({ vendor, spend, outstanding }) => (
             <li key={vendor.id} className="flex justify-between py-1.5">
-              <span className="text-gray-800">{vendor.name}</span>
-              <span className="text-gray-600">
+              <span className="text-ink">{vendor.name}</span>
+              <span className="text-ink/60">
                 {formatINR(spend)} billed · {formatINR(outstanding)} open
               </span>
             </li>

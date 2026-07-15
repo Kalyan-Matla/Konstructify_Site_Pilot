@@ -91,7 +91,6 @@ export default function Dashboard() {
           plain={String(activeProjects)}
           sub={overrunProjects > 0 ? `${overrunProjects} over budget` : 'all on budget'}
           subTone={overrunProjects > 0 ? 'text-red-600' : 'text-emerald-700'}
-          accent
         />
         <StatCard
           label="Payables <30 days"
@@ -121,21 +120,30 @@ export default function Dashboard() {
             <div
               key={a.id}
               className={clsx(
-                'flex items-center justify-between gap-2 rounded-xl border-l-4 px-3.5 py-2.5 text-sm shadow-raise',
-                a.tone === 'red' && 'border-red-500 bg-red-50 text-red-900',
-                a.tone === 'orange' && 'border-orange-500 bg-orange-50 text-orange-900',
-                a.tone === 'yellow' && 'border-amber-500 bg-amber-50 text-amber-900',
+                'flex items-center justify-between gap-2 rounded-xl bg-white px-3 py-2.5 text-sm shadow-raise ring-1 ring-inset',
+                a.tone === 'red' && 'ring-red-600/15',
+                a.tone === 'orange' && 'ring-orange-500/20',
+                a.tone === 'yellow' && 'ring-amber-500/25',
               )}
             >
-              <span className="flex items-center gap-2 font-medium">
-                <AlertTriangle size={16} aria-hidden="true" />
+              <span className="flex items-center gap-2.5 font-medium text-ink">
+                <span
+                  className={clsx(
+                    'flex h-6 w-6 shrink-0 items-center justify-center rounded-lg',
+                    a.tone === 'red' && 'bg-red-100 text-red-600',
+                    a.tone === 'orange' && 'bg-orange-100 text-orange-600',
+                    a.tone === 'yellow' && 'bg-amber-100 text-amber-700',
+                  )}
+                >
+                  <AlertTriangle size={14} aria-hidden="true" />
+                </span>
                 {a.message}
               </span>
               <button
                 type="button"
                 aria-label={`Dismiss alert: ${a.message}`}
                 onClick={() => setDismissed((s) => new Set(s).add(a.id))}
-                className="cursor-pointer rounded-full p-1 transition-colors hover:bg-black/5 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="cursor-pointer rounded-full p-1 text-ink/40 transition-colors hover:bg-ink/5 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
               >
                 <X size={15} />
               </button>
@@ -274,25 +282,17 @@ function StatCard({
   plain,
   sub,
   subTone,
-  accent,
 }: {
   label: string;
   rupees: number | null;
   plain?: string;
   sub: string;
   subTone: string;
-  accent?: boolean;
 }) {
   const tiltRef = useTilt(6);
   const animated = useCountUp(rupees ?? 0);
   return (
-    <div ref={tiltRef} className="tilt panel relative overflow-hidden p-4 sm:p-5">
-      {accent && (
-        <span
-          aria-hidden="true"
-          className="absolute left-0 top-0 h-full w-1 bg-amber-glow"
-        />
-      )}
+    <div ref={tiltRef} className="tilt panel p-4 sm:p-5">
       <div className="tilt-inner">
         <p className="text-[11px] font-bold uppercase tracking-wider text-ink/45">{label}</p>
         <p className="num mt-1.5 text-2xl font-bold text-ink sm:text-3xl">
