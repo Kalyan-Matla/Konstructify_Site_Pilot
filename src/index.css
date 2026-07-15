@@ -32,32 +32,52 @@ body {
 }
 
 @layer components {
-  /* Elevated surface with tactile hover */
+  /* Elevated surface with tactile hover. Transition only what moves —
+     never `all` — so paint stays cheap and motion reads intentional. */
   .panel {
-    @apply rounded-2xl border border-ink/10 bg-white shadow-raise transition-all duration-300;
+    @apply rounded-2xl border border-ink/10 bg-white shadow-raise;
+    transition:
+      transform 300ms var(--ease-out-soft),
+      box-shadow 300ms var(--ease-out-soft);
   }
-  .panel-hover {
-    @apply hover:-translate-y-0.5 hover:shadow-lift;
+  /* Lift only on real pointers — touch taps would otherwise stick in :hover. */
+  @media (hover: hover) and (pointer: fine) {
+    .panel-hover:hover {
+      transform: translateY(-2px);
+      @apply shadow-lift;
+    }
   }
 
   /* 3D tilt shell — inner content lifted on the z-axis */
   .tilt {
     transform-style: preserve-3d;
     will-change: transform;
-    transition: transform 0.35s var(--ease-out-soft), box-shadow 0.3s ease;
+    transition: transform 0.4s var(--ease-out-soft), box-shadow 0.3s var(--ease-out-soft);
   }
   .tilt-inner {
     transform: translateZ(24px);
   }
 
+  /* Buttons: press feedback at 0.97, strong ease-out, keyboard-only focus ring. */
   .btn-primary {
-    @apply cursor-pointer rounded-xl bg-amber-glow px-4 py-2 text-sm font-bold text-ink shadow-glow transition-all duration-200 hover:brightness-105 hover:shadow-lift active:scale-95 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2;
+    @apply cursor-pointer rounded-xl bg-amber-glow px-4 py-2 text-sm font-bold text-ink shadow-glow hover:brightness-105 hover:shadow-lift active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2;
+    transition:
+      transform 150ms var(--ease-out-soft),
+      box-shadow 220ms var(--ease-out-soft),
+      filter 150ms ease;
   }
   .btn-ghost {
-    @apply cursor-pointer rounded-xl border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink/80 transition-all duration-200 hover:border-ink/30 hover:bg-paper-soft active:scale-95 focus:outline-none focus:ring-2 focus:ring-amber-500;
+    @apply cursor-pointer rounded-xl border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink/80 hover:border-ink/30 hover:bg-paper-soft active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500;
+    transition:
+      transform 150ms var(--ease-out-soft),
+      background-color 180ms var(--ease-out-soft),
+      border-color 180ms var(--ease-out-soft);
   }
   .btn-success {
-    @apply cursor-pointer rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white transition-all duration-200 hover:bg-emerald-500 active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-500;
+    @apply cursor-pointer rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-500 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500;
+    transition:
+      transform 150ms var(--ease-out-soft),
+      background-color 180ms var(--ease-out-soft);
   }
   .btn-sm {
     @apply px-3 py-1.5 text-xs;
@@ -65,7 +85,13 @@ body {
 
   /* Filter chips */
   .chip {
-    @apply cursor-pointer rounded-full px-3.5 py-1.5 text-xs font-bold transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-amber-500;
+    @apply cursor-pointer rounded-full px-3.5 py-1.5 text-xs font-bold active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500;
+    transition:
+      transform 150ms var(--ease-out-soft),
+      background-color 180ms var(--ease-out-soft),
+      color 180ms var(--ease-out-soft),
+      border-color 180ms var(--ease-out-soft),
+      box-shadow 180ms var(--ease-out-soft);
   }
   .chip-active {
     @apply bg-ink text-amber-glow shadow-raise;

@@ -89,7 +89,7 @@ export default function Layout() {
               aria-label={isOnline ? 'Online — click to simulate offline' : 'Offline — click to go back online'}
               title={isOnline ? 'Online — click to simulate offline' : 'Offline — click to reconnect'}
               className={clsx(
-                'flex cursor-pointer items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold uppercase tracking-wide transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-amber-500',
+                'flex cursor-pointer items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold uppercase tracking-wide transition-colors duration-200 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500',
                 isOnline
                   ? 'bg-emerald-100 text-emerald-900 ring-1 ring-inset ring-emerald-600/25'
                   : 'bg-red-100 text-red-900 ring-1 ring-inset ring-red-600/25',
@@ -114,7 +114,7 @@ export default function Layout() {
                 {userMenu && (
                   <div
                     role="menu"
-                    className="absolute right-0 top-11 z-50 w-56 animate-pop-in overflow-hidden rounded-2xl bg-white shadow-lift ring-1 ring-ink/10"
+                    className="absolute right-0 top-11 z-50 w-56 origin-top-right animate-pop-in overflow-hidden rounded-2xl bg-white shadow-lift ring-1 ring-ink/10"
                   >
                     <div className="border-b border-ink/10 px-4 py-3">
                       <p className="text-sm font-bold text-ink">{user.name}</p>
@@ -158,7 +158,7 @@ export default function Layout() {
                   end={item.path === '/'}
                   className={({ isActive }) =>
                     clsx(
-                      'group relative flex items-center gap-3 overflow-hidden rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-500',
+                      'group relative flex items-center gap-3 overflow-hidden rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-colors duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500',
                       isActive
                         ? 'bg-ink/[0.055] text-ink'
                         : 'text-ink/55 hover:bg-paper-soft hover:text-ink',
@@ -219,7 +219,7 @@ export default function Layout() {
               end={tab.path === '/'}
               className={({ isActive }) =>
                 clsx(
-                  'flex min-h-[54px] flex-1 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-2xl py-2 text-[10px] font-bold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-amber-500',
+                  'flex min-h-[54px] flex-1 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-2xl py-2 text-[10px] font-bold transition-colors duration-200 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-500',
                   isActive ? 'text-amber-glow' : 'text-white/50',
                 )
               }
@@ -267,7 +267,7 @@ export default function Layout() {
             aria-modal="true"
             aria-label="More navigation"
             onClick={(e) => e.stopPropagation()}
-            className="absolute bottom-0 left-0 right-0 animate-pop-in rounded-t-3xl bg-paper-soft p-4 shadow-lift"
+            className="absolute bottom-0 left-0 right-0 origin-bottom animate-pop-in rounded-t-3xl bg-paper-soft p-4 shadow-lift"
           >
             <div className="mb-2 flex items-center justify-between">
               <h2 className="font-display text-lg text-ink">More</h2>
