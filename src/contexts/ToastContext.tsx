@@ -177,6 +177,8 @@ function ToastCard({
   onMouseLeave: () => void;
 }) {
   const [mounted, setMounted] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [runKey, setRunKey] = useState(0);
   useEffect(() => {
     const raf = requestAnimationFrame(() => setMounted(true));
     return () => cancelAnimationFrame(raf);
@@ -184,45 +186,70 @@ function ToastCard({
 
   const Icon = item.icon ?? TONE_ICON[item.tone];
   const visible = mounted && !item.leaving;
+  // Matches the duration the context actually schedules — see `toast()`.
+  const duration = item.action ? WITH_ACTION_DURATION : DEFAULT_DURATION;
 
   return (
     <div
       role="status"
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
+      onMouseEnter={() => {
+        setHovered(true);
+        onMouseEnter();
+      }}
+      onMouseLeave={() => {
+        setHovered(false);
+        // Pausing on hover cancels the pending JS dismiss; leaving reschedules
+        // a fresh full-duration timer (see onResume below) — restart the bar
+        // in step with that by forcing the CSS animation to remount.
+        setRunKey((k) => k + 1);
+        onMouseLeave();
+      }}
       className={clsx(
-        'pointer-events-auto flex items-start gap-3 rounded-2xl bg-ink px-4 py-3 text-white shadow-lift ring-1 ring-white/10',
+        'pointer-events-auto relative overflow-hidden rounded-2xl bg-ink shadow-lift ring-1 ring-white/10',
         'transition-[transform,opacity] ease-out',
         item.leaving ? 'duration-150' : 'duration-300',
         visible ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0',
       )}
     >
-      <span className={clsx('mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg', TONE_CHIP[item.tone])}>
-        <Icon size={15} aria-hidden="true" />
-      </span>
-      <div className="min-w-0 flex-1 pt-0.5">
-        <p className="text-sm font-medium leading-snug">{item.message}</p>
-        {item.action && (
-          <button
-            type="button"
-            onClick={() => {
-              item.action?.onClick();
-              onDismiss();
-            }}
-            className="mt-1 cursor-pointer text-xs font-bold text-amber-glow transition-colors hover:text-amber-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-ink"
-          >
-            {item.action.label}
-          </button>
-        )}
+      <div className="flex items-start gap-3 px-4 py-3 text-white">
+        <span className={clsx('mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg', TONE_CHIP[item.tone])}>
+          <Icon size={15} aria-hidden="true" />
+        </span>
+        <div className="min-w-0 flex-1 pt-0.5">
+          <p className="text-sm font-medium leading-snug">{item.message}</p>
+          {item.action && (
+            <button
+              type="button"
+              onClick={() => {
+                item.action?.onClick();
+                onDismiss();
+              }}
+              className="mt-1 cursor-pointer text-xs font-bold text-amber-glow transition-colors hover:text-amber-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-ink"
+            >
+              {item.action.label}
+            </button>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={onDismiss}
+          aria-label="Dismiss notification"
+          className="cursor-pointer rounded-full p-1 text-white/40 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+        >
+          <X size={14} />
+        </button>
       </div>
-      <button
-        type="button"
-        onClick={onDismiss}
-        aria-label="Dismiss notification"
-        className="cursor-pointer rounded-full p-1 text-white/40 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
-      >
-        <X size={14} />
-      </button>
+      {!item.leaving && (
+        <span
+          key={runKey}
+          aria-hidden="true"
+          className="toast-bar absolute inset-x-0 bottom-0 h-[3px] origin-left bg-white/25"
+          style={{
+            animation: `toast-shrink ${duration}ms linear forwards`,
+            animationPlayState: hovered ? 'paused' : 'running',
+          }}
+        />
+      )}
     </div>
   );
 }

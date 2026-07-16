@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ClipboardList,
+  Clock,
   CreditCard,
   FolderOpen,
   HardHat,
@@ -28,6 +29,29 @@ interface PaletteItem {
 }
 
 const DEFAULT_GROUPS = new Set(['Pages', 'Quick actions']);
+const RECENT_GROUP = 'Recent';
+const RECENT_STORAGE_KEY = 'konstructify-palette-recent-v1';
+const MAX_RECENTS = 6;
+
+function loadRecentIds(): string[] {
+  try {
+    const raw = localStorage.getItem(RECENT_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+function pushRecentId(id: string) {
+  try {
+    const next = [id, ...loadRecentIds().filter((x) => x !== id)].slice(0, MAX_RECENTS);
+    localStorage.setItem(RECENT_STORAGE_KEY, JSON.stringify(next));
+  } catch {
+    // storage unavailable — recency just won't persist, non-fatal
+  }
+}
 
 export default function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { state } = useApp();
@@ -35,6 +59,7 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
+  const [recentIds, setRecentIds] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -42,6 +67,7 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
     if (!open) return;
     setQuery('');
     setActiveIndex(0);
+    setRecentIds(loadRecentIds());
     const t = window.setTimeout(() => inputRef.current?.focus(), 20);
     return () => window.clearTimeout(t);
   }, [open]);
@@ -49,6 +75,14 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
   const go = (path: string, routerState?: { openNew?: boolean; openView?: string }) => {
     navigate(path, routerState ? { state: routerState } : undefined);
     onClose();
+  };
+
+  /** Every real invocation (click or Enter) records recency — both the "run"
+   *  and the bookkeeping happen here, in one place, so no item generator
+   *  needs to know about it. */
+  const invoke = (item: PaletteItem) => {
+    pushRecentId(item.id);
+    item.run();
   };
 
   const items = useMemo<PaletteItem[]>(() => {
@@ -129,7 +163,18 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (q === '') return items.filter((i) => DEFAULT_GROUPS.has(i.group));
+    if (q === '') {
+      // Recent first (most-recent-first, per stored order), then the usual
+      // defaults with anything already shown in Recent filtered out so
+      // nothing appears twice in the same static list.
+      const recentItems = recentIds
+        .map((id) => items.find((i) => i.id === id))
+        .filter((i): i is PaletteItem => !!i)
+        .map((i) => ({ ...i, group: RECENT_GROUP }));
+      const recentIdSet = new Set(recentItems.map((i) => i.id));
+      const defaults = items.filter((i) => DEFAULT_GROUPS.has(i.group) && !recentIdSet.has(i.id));
+      return [...recentItems, ...defaults];
+    }
     return items
       .filter(
         (i) =>
@@ -138,7 +183,7 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
           i.group.toLowerCase().includes(q),
       )
       .slice(0, 40);
-  }, [items, query]);
+  }, [items, query, recentIds]);
 
   const groups = useMemo(() => {
     const order: string[] = [];
@@ -173,7 +218,8 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
       setActiveIndex((i) => Math.max(i - 1, 0));
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      filtered[activeIndex]?.run();
+      const item = filtered[activeIndex];
+      if (item) invoke(item);
     } else if (e.key === 'Escape') {
       onClose();
     }
@@ -215,7 +261,8 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
           ) : (
             groups.map(({ group, items: groupItems }) => (
               <div key={group} className="mb-1 last:mb-0">
-                <p className="px-2.5 pb-1 pt-2 text-[11px] font-bold uppercase tracking-wider text-ink/60">
+                <p className="flex items-center gap-1 px-2.5 pb-1 pt-2 text-[11px] font-bold uppercase tracking-wider text-ink/60">
+                  {group === RECENT_GROUP && <Clock size={11} aria-hidden="true" />}
                   {group}
                 </p>
                 {groupItems.map((item) => {
@@ -228,7 +275,7 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
                       role="option"
                       aria-selected={active}
                       data-index={index}
-                      onClick={item.run}
+                      onClick={() => invoke(item)}
                       onMouseEnter={() => setActiveIndex(index)}
                       className={clsx(
                         'flex w-full cursor-pointer items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-colors',

@@ -190,6 +190,17 @@ body {
   transition: stroke-dashoffset 1.1s var(--ease-out-soft);
 }
 
+/* Toast dismiss-countdown bar */
+@keyframes toast-shrink {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast-bar {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
