@@ -103,7 +103,7 @@ export default function Layout() {
             >
               <Search size={14} aria-hidden="true" />
               <span className="hidden sm:inline">Search…</span>
-              <kbd className="hidden rounded border border-ink/15 bg-paper-soft px-1.5 py-0.5 font-sans text-[10px] font-bold text-ink/45 sm:inline">
+              <kbd className="hidden rounded border border-ink/15 bg-paper-soft px-1.5 py-0.5 font-sans text-[10px] font-bold text-ink/60 sm:inline">
                 ⌘K
               </kbd>
             </button>
