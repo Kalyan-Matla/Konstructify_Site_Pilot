@@ -23,6 +23,7 @@ import type {
 } from '../types';
 import { buildMockState } from '../utils/mock-data';
 import { uid } from '../utils/format';
+import { useToast } from './ToastContext';
 
 const STORAGE_KEY = 'konstructify-state-v1';
 
@@ -96,7 +97,7 @@ interface AppContextValue {
   setSimulateOffline: (v: boolean) => void;
   pendingCount: number;
   isPending: (entity: EntityKind, id: string) => boolean;
-  upsert: (entity: EntityKind, item: Entity, label: string) => void;
+  upsert: (entity: EntityKind, item: Entity, label: string, opts?: { silent?: boolean }) => void;
   remove: (entity: EntityKind, id: string, label: string) => void;
   resetData: () => void;
 }
@@ -104,6 +105,7 @@ interface AppContextValue {
 const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
+  const { toast } = useToast();
   const [state, dispatch] = useReducer(reducer, undefined, loadInitialState);
   const [browserOnline, setBrowserOnline] = useState<boolean>(navigator.onLine);
   const [simulateOffline, setSimulateOffline] = useState(false);
@@ -177,21 +179,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const upsert = useCallback(
-    (entity: EntityKind, item: Entity, label: string) => {
+    (entity: EntityKind, item: Entity, label: string, opts?: { silent?: boolean }) => {
       const key = collectionOf[entity];
       const exists = (stateRef.current[key] as Entity[]).some((e) => e.id === item.id);
       dispatch({ type: 'upsert', entity, item });
       track(exists ? 'update' : 'create', entity, item.id, label);
+      if (!opts?.silent) toast(label, { tone: 'success' });
     },
-    [track],
+    [track, toast],
   );
 
   const remove = useCallback(
     (entity: EntityKind, id: string, label: string) => {
+      const key = collectionOf[entity];
+      const removedItem = (stateRef.current[key] as Entity[]).find((e) => e.id === id);
+      // Every delete label ends in "... deleted" by convention — swap the verb
+      // rather than concatenating, so the restore toast reads as its own sentence.
+      const restoredLabel = /deleted$/.test(label) ? label.replace(/deleted$/, 'restored') : `${label.replace(/\.$/, '')} — restored`;
       dispatch({ type: 'remove', entity, id });
       track('delete', entity, id, label);
+      toast(label, {
+        tone: 'info',
+        action: removedItem
+          ? {
+              label: 'Undo',
+              onClick: () => upsert(entity, removedItem, restoredLabel),
+            }
+          : undefined,
+      });
     },
-    [track],
+    [track, toast, upsert],
   );
 
   const resetData = useCallback(() => {

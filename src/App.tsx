@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { AppProvider } from './contexts/AppContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ToastProvider } from './contexts/ToastContext';
 import Layout from './components/Layout';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
@@ -50,8 +51,10 @@ function Shell() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <Shell />
-    </AuthProvider>
+    <ToastProvider>
+      <AuthProvider>
+        <Shell />
+      </AuthProvider>
+    </ToastProvider>
   );
 }

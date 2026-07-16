@@ -291,6 +291,7 @@ function TaskDetail({ task, onClose }: { task: WorkTask; onClose: () => void }) 
         status: pct >= 100 ? 'complete' : pct > 0 ? 'in-progress' : task.status,
       },
       `Task "${task.name}" marked ${pct}%`,
+      { silent: true },
     );
   };
 
