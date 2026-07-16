@@ -2,9 +2,12 @@ import { useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { Camera, CheckCircle2, HardHat, Pencil, Plus, Trash2 } from 'lucide-react';
 import type { TaskPhoto, TaskStatus, WorkTask } from '../types';
 import { useApp } from '../contexts/AppContext';
+import { useToast } from '../contexts/ToastContext';
 import {
   AICard,
   Badge,
+  BulkBar,
+  BulkCheckbox,
   ConfirmDialog,
   EmptyState,
   Field,
@@ -12,12 +15,15 @@ import {
   Modal,
   PageHeader,
   ProgressBar,
+  SelectAllToggle,
   SyncBadge,
   inputCls,
 } from '../components/ui';
 import { suggestWorkStatus } from '../utils/ai-suggestions';
 import { daysUntil, formatDate, isoDaysFromNow, todayISO, uid } from '../utils/format';
 import { useRouteAction } from '../hooks/useRouteAction';
+import { useBulkSelect } from '../hooks/useBulkSelect';
+import { useBulkDelete } from '../hooks/useBulkDelete';
 
 type Filter = 'all' | TaskStatus;
 
@@ -54,11 +60,15 @@ function resizeImage(file: File): Promise<string> {
 
 export default function WorkStatus() {
   const { state, upsert, remove } = useApp();
+  const { toast } = useToast();
   const [filter, setFilter] = useState<Filter>('all');
   const [projectFilter, setProjectFilter] = useState('all');
   const [editing, setEditing] = useState<WorkTask | 'new' | null>(null);
   const [viewing, setViewing] = useState<string | null>(null); // task id (live lookup)
   const [deleting, setDeleting] = useState<WorkTask | null>(null);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const { selected, toggle, clear, setAll } = useBulkSelect();
+  const bulkDelete = useBulkDelete<WorkTask>('task', 'task');
 
   useRouteAction({ openNew: () => setEditing('new'), openView: (id) => setViewing(id) });
 
@@ -68,6 +78,16 @@ export default function WorkStatus() {
       (projectFilter === 'all' || t.projectId === projectFilter),
   );
   const viewingTask = viewing ? state.tasks.find((t) => t.id === viewing) ?? null : null;
+
+  const bulkMarkComplete = () => {
+    const items = state.tasks.filter((t) => selected.has(t.id) && t.status !== 'complete');
+    if (items.length === 0) return;
+    for (const t of items) {
+      upsert('task', { ...t, status: 'complete', percentComplete: 100 }, `Task "${t.name}" completed`, { silent: true });
+    }
+    toast(`${items.length} task${items.length === 1 ? '' : 's'} marked complete`, { tone: 'success' });
+    clear();
+  };
 
   return (
     <div>
@@ -112,6 +132,29 @@ export default function WorkStatus() {
         </select>
       </div>
 
+      {tasks.length > 0 && (
+        <div className="mb-4 flex justify-end">
+          <SelectAllToggle
+            checked={tasks.every((t) => selected.has(t.id))}
+            onChange={() => setAll(tasks.every((t) => selected.has(t.id)) ? [] : tasks.map((t) => t.id))}
+            label="Select all"
+          />
+        </div>
+      )}
+
+      <BulkBar count={selected.size} itemLabel="task" onClear={clear}>
+        <button type="button" onClick={bulkMarkComplete} className="btn-success btn-sm flex items-center gap-1.5">
+          <CheckCircle2 size={14} aria-hidden="true" /> Mark complete
+        </button>
+        <button
+          type="button"
+          onClick={() => setBulkDeleting(true)}
+          className="flex items-center gap-1.5 rounded-xl bg-red-600 px-3 py-1.5 text-xs font-bold text-white transition-[transform,background-color] duration-200 ease-out hover:bg-red-500 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+        >
+          <Trash2 size={14} aria-hidden="true" /> Delete
+        </button>
+      </BulkBar>
+
       {tasks.length === 0 ? (
         <EmptyState
           icon={HardHat}
@@ -124,15 +167,25 @@ export default function WorkStatus() {
           {tasks.map((t) => {
             const overdue = t.status !== 'complete' && daysUntil(t.dueDate) < 0;
             return (
-              <div key={t.id} className="panel panel-hover p-4">
+              <div
+                key={t.id}
+                className={`panel panel-hover p-4 ${selected.has(t.id) ? 'ring-2 ring-amber-500' : ''}`}
+              >
                 <div className="flex items-start justify-between gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setViewing(t.id)}
-                    className="text-left font-semibold text-ink hover:text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  >
-                    {t.name}
-                  </button>
+                  <div className="flex min-w-0 items-start gap-2">
+                    <BulkCheckbox
+                      checked={selected.has(t.id)}
+                      onChange={() => toggle(t.id)}
+                      ariaLabel={`Select ${t.name} for bulk actions`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setViewing(t.id)}
+                      className="text-left font-semibold text-ink hover:text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    >
+                      {t.name}
+                    </button>
+                  </div>
                   {t.status === 'complete' ? (
                     <Badge tone="green">done</Badge>
                   ) : overdue ? (
@@ -188,6 +241,21 @@ export default function WorkStatus() {
           onConfirm={() => {
             remove('task', deleting.id, `Task "${deleting.name}" deleted`);
             setDeleting(null);
+          }}
+        />
+      )}
+
+      {bulkDeleting && (
+        <ConfirmDialog
+          title={`Delete ${selected.size} task${selected.size === 1 ? '' : 's'}?`}
+          message="Their photos will be removed too. This can be undone from the confirmation toast."
+          confirmLabel={`Delete ${selected.size}`}
+          onCancel={() => setBulkDeleting(false)}
+          onConfirm={() => {
+            const items = state.tasks.filter((t) => selected.has(t.id));
+            bulkDelete(items, (t) => `Task "${t.name}" deleted`);
+            setBulkDeleting(false);
+            clear();
           }}
         />
       )}

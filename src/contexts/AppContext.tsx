@@ -27,7 +27,7 @@ import { useToast } from './ToastContext';
 
 const STORAGE_KEY = 'konstructify-state-v1';
 
-type Entity = Project | Vendor | Invoice | WorkTask | WorkOrder | BudgetItem;
+export type Entity = Project | Vendor | Invoice | WorkTask | WorkOrder | BudgetItem;
 
 const collectionOf: Record<EntityKind, keyof AppState> = {
   project: 'projects',
@@ -98,7 +98,7 @@ interface AppContextValue {
   pendingCount: number;
   isPending: (entity: EntityKind, id: string) => boolean;
   upsert: (entity: EntityKind, item: Entity, label: string, opts?: { silent?: boolean }) => void;
-  remove: (entity: EntityKind, id: string, label: string) => void;
+  remove: (entity: EntityKind, id: string, label: string, opts?: { silent?: boolean }) => Entity | undefined;
   resetData: () => void;
 }
 
@@ -190,7 +190,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const remove = useCallback(
-    (entity: EntityKind, id: string, label: string) => {
+    (entity: EntityKind, id: string, label: string, opts?: { silent?: boolean }) => {
       const key = collectionOf[entity];
       const removedItem = (stateRef.current[key] as Entity[]).find((e) => e.id === id);
       // Every delete label ends in "... deleted" by convention — swap the verb
@@ -198,15 +198,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const restoredLabel = /deleted$/.test(label) ? label.replace(/deleted$/, 'restored') : `${label.replace(/\.$/, '')} — restored`;
       dispatch({ type: 'remove', entity, id });
       track('delete', entity, id, label);
-      toast(label, {
-        tone: 'info',
-        action: removedItem
-          ? {
-              label: 'Undo',
-              onClick: () => upsert(entity, removedItem, restoredLabel),
-            }
-          : undefined,
-      });
+      if (!opts?.silent) {
+        toast(label, {
+          tone: 'info',
+          action: removedItem
+            ? {
+                label: 'Undo',
+                onClick: () => upsert(entity, removedItem, restoredLabel),
+              }
+            : undefined,
+        });
+      }
+      return removedItem;
     },
     [track, toast, upsert],
   );

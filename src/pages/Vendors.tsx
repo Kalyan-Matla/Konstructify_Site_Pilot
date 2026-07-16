@@ -6,6 +6,8 @@ import { useApp } from '../contexts/AppContext';
 import {
   AICard,
   Badge,
+  BulkBar,
+  BulkCheckbox,
   ConfirmDialog,
   EmptyState,
   Field,
@@ -13,6 +15,7 @@ import {
   Modal,
   PageHeader,
   ProgressBar,
+  SelectAllToggle,
   SyncBadge,
   inputCls,
 } from '../components/ui';
@@ -28,6 +31,8 @@ import {
 import { suggestVendor } from '../utils/ai-suggestions';
 import { formatDate, formatINR, uid } from '../utils/format';
 import { useRouteAction } from '../hooks/useRouteAction';
+import { useBulkSelect } from '../hooks/useBulkSelect';
+import { useBulkDelete } from '../hooks/useBulkDelete';
 
 type CategoryFilter = 'all' | VendorCategory;
 type HealthFilter = 'all' | CreditHealth;
@@ -53,6 +58,9 @@ export default function Vendors() {
   const [editing, setEditing] = useState<Vendor | 'new' | null>(null);
   const [viewing, setViewing] = useState<Vendor | null>(null);
   const [deleting, setDeleting] = useState<Vendor | null>(null);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const { selected, toggle, clear, setAll } = useBulkSelect();
+  const bulkDelete = useBulkDelete<Vendor>('vendor', 'vendor');
 
   useRouteAction({
     openNew: () => setEditing('new'),
@@ -84,24 +92,45 @@ export default function Vendors() {
         }
       />
 
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <label htmlFor="vf-cat" className="text-sm text-ink/60">Category</label>
-        <select id="vf-cat" className="rounded-xl border border-ink/15 bg-white px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" value={category} onChange={(e) => setCategory(e.target.value as CategoryFilter)}>
-          <option value="all">All</option>
-          <option value="material">Material</option>
-          <option value="service">Service</option>
-          <option value="labor">Labor</option>
-          <option value="equipment">Equipment</option>
-        </select>
-        <label htmlFor="vf-health" className="ml-2 text-sm text-ink/60">Credit</label>
-        <select id="vf-health" className="rounded-xl border border-ink/15 bg-white px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" value={health} onChange={(e) => setHealth(e.target.value as HealthFilter)}>
-          <option value="all">All</option>
-          <option value="healthy">Healthy (&lt;50%)</option>
-          <option value="warning">50–80%</option>
-          <option value="high">80–95%</option>
-          <option value="maxed">&gt;95%</option>
-        </select>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <label htmlFor="vf-cat" className="text-sm text-ink/60">Category</label>
+          <select id="vf-cat" className="rounded-xl border border-ink/15 bg-white px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" value={category} onChange={(e) => setCategory(e.target.value as CategoryFilter)}>
+            <option value="all">All</option>
+            <option value="material">Material</option>
+            <option value="service">Service</option>
+            <option value="labor">Labor</option>
+            <option value="equipment">Equipment</option>
+          </select>
+          <label htmlFor="vf-health" className="ml-2 text-sm text-ink/60">Credit</label>
+          <select id="vf-health" className="rounded-xl border border-ink/15 bg-white px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" value={health} onChange={(e) => setHealth(e.target.value as HealthFilter)}>
+            <option value="all">All</option>
+            <option value="healthy">Healthy (&lt;50%)</option>
+            <option value="warning">50–80%</option>
+            <option value="high">80–95%</option>
+            <option value="maxed">&gt;95%</option>
+          </select>
+        </div>
+        {vendors.length > 0 && (
+          <SelectAllToggle
+            checked={vendors.every((v) => selected.has(v.id))}
+            onChange={() =>
+              setAll(vendors.every((v) => selected.has(v.id)) ? [] : vendors.map((v) => v.id))
+            }
+            label="Select all"
+          />
+        )}
       </div>
+
+      <BulkBar count={selected.size} itemLabel="vendor" onClear={clear}>
+        <button
+          type="button"
+          onClick={() => setBulkDeleting(true)}
+          className="flex items-center gap-1.5 rounded-xl bg-red-600 px-3 py-1.5 text-xs font-bold text-white transition-[transform,background-color] duration-200 ease-out hover:bg-red-500 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+        >
+          <Trash2 size={14} aria-hidden="true" /> Delete
+        </button>
+      </BulkBar>
 
       {vendors.length === 0 ? (
         <EmptyState
@@ -118,15 +147,25 @@ export default function Vendors() {
             const h = creditHealth(v, state.invoices);
             const overdue = vendorHasOverdue(v.id, state.invoices);
             return (
-              <div key={v.id} className="panel panel-hover p-4">
+              <div
+                key={v.id}
+                className={`panel panel-hover p-4 ${selected.has(v.id) ? 'ring-2 ring-amber-500' : ''}`}
+              >
                 <div className="flex items-start justify-between gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setViewing(v)}
-                    className="text-left text-base font-semibold text-ink hover:text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  >
-                    {v.name}
-                  </button>
+                  <div className="flex min-w-0 items-start gap-2">
+                    <BulkCheckbox
+                      checked={selected.has(v.id)}
+                      onChange={() => toggle(v.id)}
+                      ariaLabel={`Select ${v.name} for bulk actions`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setViewing(v)}
+                      className="text-left text-base font-semibold text-ink hover:text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    >
+                      {v.name}
+                    </button>
+                  </div>
                   {healthBadge(h, overdue)}
                 </div>
                 <p className="text-sm capitalize text-ink/55">{v.category} · {v.paymentTerms} terms</p>
@@ -195,6 +234,21 @@ export default function Vendors() {
           onConfirm={() => {
             remove('vendor', deleting.id, `Vendor "${deleting.name}" deleted`);
             setDeleting(null);
+          }}
+        />
+      )}
+
+      {bulkDeleting && (
+        <ConfirmDialog
+          title={`Delete ${selected.size} vendor${selected.size === 1 ? '' : 's'}?`}
+          message="They'll be removed from the vendor master. Their invoices stay in Payments. This can be undone from the confirmation toast."
+          confirmLabel={`Delete ${selected.size}`}
+          onCancel={() => setBulkDeleting(false)}
+          onConfirm={() => {
+            const items = state.vendors.filter((v) => selected.has(v.id));
+            bulkDelete(items, (v) => `Vendor "${v.name}" deleted`);
+            setBulkDeleting(false);
+            clear();
           }}
         />
       )}

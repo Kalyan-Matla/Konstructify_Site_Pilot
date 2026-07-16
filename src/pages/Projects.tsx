@@ -3,8 +3,12 @@ import { FolderOpen, Pencil, Plus, Trash2 } from 'lucide-react';
 import type { Project, ProjectStatus } from '../types';
 import { useApp } from '../contexts/AppContext';
 import { useRouteAction } from '../hooks/useRouteAction';
+import { useBulkSelect } from '../hooks/useBulkSelect';
+import { useBulkDelete } from '../hooks/useBulkDelete';
 import {
   Badge,
+  BulkBar,
+  BulkCheckbox,
   ConfirmDialog,
   EmptyState,
   Field,
@@ -12,6 +16,7 @@ import {
   Modal,
   PageHeader,
   ProgressBar,
+  SelectAllToggle,
   SyncBadge,
   inputCls,
 } from '../components/ui';
@@ -28,6 +33,9 @@ export default function Projects() {
   const [editing, setEditing] = useState<Project | 'new' | null>(null);
   const [viewing, setViewing] = useState<Project | null>(null);
   const [deleting, setDeleting] = useState<Project | null>(null);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const { selected, toggle, clear, setAll } = useBulkSelect();
+  const bulkDelete = useBulkDelete<Project>('project', 'project');
 
   useRouteAction({
     openNew: () => setEditing('new'),
@@ -55,21 +63,42 @@ export default function Projects() {
         }
       />
 
-      <div className="mb-4 flex flex-wrap gap-2" role="group" aria-label="Filter projects">
-        {(['all', 'in-progress', 'on-hold', 'completed'] as const).map((f) => (
-          <button
-            key={f}
-            type="button"
-            onClick={() => setFilter(f)}
-            aria-pressed={filter === f}
-            className={`chip capitalize ${
-              filter === f ? 'chip-active' : 'chip-idle'
-            }`}
-          >
-            {f}
-          </button>
-        ))}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Filter projects">
+          {(['all', 'in-progress', 'on-hold', 'completed'] as const).map((f) => (
+            <button
+              key={f}
+              type="button"
+              onClick={() => setFilter(f)}
+              aria-pressed={filter === f}
+              className={`chip capitalize ${
+                filter === f ? 'chip-active' : 'chip-idle'
+              }`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+        {projects.length > 0 && (
+          <SelectAllToggle
+            checked={projects.every((p) => selected.has(p.id))}
+            onChange={() =>
+              setAll(projects.every((p) => selected.has(p.id)) ? [] : projects.map((p) => p.id))
+            }
+            label="Select all"
+          />
+        )}
       </div>
+
+      <BulkBar count={selected.size} itemLabel="project" onClear={clear}>
+        <button
+          type="button"
+          onClick={() => setBulkDeleting(true)}
+          className="flex items-center gap-1.5 rounded-xl bg-red-600 px-3 py-1.5 text-xs font-bold text-white transition-[transform,background-color] duration-200 ease-out hover:bg-red-500 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+        >
+          <Trash2 size={14} aria-hidden="true" /> Delete
+        </button>
+      </BulkBar>
 
       {projects.length === 0 ? (
         <EmptyState
@@ -85,15 +114,25 @@ export default function Projects() {
             const over = spent > p.budget;
             const remaining = daysUntil(p.endDate);
             return (
-              <div key={p.id} className="panel panel-hover p-4">
+              <div
+                key={p.id}
+                className={`panel panel-hover p-4 ${selected.has(p.id) ? 'ring-2 ring-amber-500' : ''}`}
+              >
                 <div className="flex items-start justify-between gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setViewing(p)}
-                    className="text-left font-semibold text-ink hover:text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  >
-                    {p.name}
-                  </button>
+                  <div className="flex min-w-0 items-start gap-2">
+                    <BulkCheckbox
+                      checked={selected.has(p.id)}
+                      onChange={() => toggle(p.id)}
+                      ariaLabel={`Select ${p.name} for bulk actions`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setViewing(p)}
+                      className="text-left font-semibold text-ink hover:text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    >
+                      {p.name}
+                    </button>
+                  </div>
                   <Badge tone={over ? 'red' : p.status === 'in-progress' ? 'green' : p.status === 'on-hold' ? 'yellow' : 'blue'}>
                     {over ? 'overrun' : p.status}
                   </Badge>
@@ -158,6 +197,21 @@ export default function Projects() {
           onConfirm={() => {
             remove('project', deleting.id, `Project "${deleting.name}" deleted`);
             setDeleting(null);
+          }}
+        />
+      )}
+
+      {bulkDeleting && (
+        <ConfirmDialog
+          title={`Delete ${selected.size} project${selected.size === 1 ? '' : 's'}?`}
+          message="Their dashboard summaries will be removed. Vendors, invoices and tasks are kept. This can be undone from the confirmation toast."
+          confirmLabel={`Delete ${selected.size}`}
+          onCancel={() => setBulkDeleting(false)}
+          onConfirm={() => {
+            const items = state.projects.filter((p) => selected.has(p.id));
+            bulkDelete(items, (p) => `Project "${p.name}" deleted`);
+            setBulkDeleting(false);
+            clear();
           }}
         />
       )}

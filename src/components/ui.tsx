@@ -318,6 +318,85 @@ export function AICard({
   );
 }
 
+/** 44×44 touch-target-safe checkbox for list-row bulk selection — the visual
+ *  checkbox stays 16px, but the hit area is padded via a negative-margin
+ *  label so it doesn't shift surrounding layout. */
+export function BulkCheckbox({
+  checked,
+  onChange,
+  ariaLabel,
+}: {
+  checked: boolean;
+  onChange: () => void;
+  ariaLabel: string;
+}) {
+  return (
+    <label className="-m-3.5 flex shrink-0 cursor-pointer items-center p-3.5">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={onChange}
+        aria-label={ariaLabel}
+        className="h-4 w-4 rounded accent-amber-500"
+      />
+    </label>
+  );
+}
+
+export function SelectAllToggle({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  onChange: () => void;
+  label: string;
+}) {
+  return (
+    <label className="-my-3.5 flex cursor-pointer items-center gap-2 py-3.5 text-xs font-semibold text-ink/55">
+      <input type="checkbox" checked={checked} onChange={onChange} className="h-4 w-4 rounded accent-amber-500" />
+      {label}
+    </label>
+  );
+}
+
+/** Floating selection bar shown once ≥1 row is bulk-selected. Action buttons
+ *  are passed as children so each page controls what's on offer. */
+export function BulkBar({
+  count,
+  itemLabel,
+  detail,
+  onClear,
+  children,
+}: {
+  count: number;
+  itemLabel: string;
+  detail?: string;
+  onClear: () => void;
+  children: ReactNode;
+}) {
+  if (count === 0) return null;
+  return (
+    <div className="mb-4 flex animate-fade-up flex-wrap items-center justify-between gap-3 rounded-2xl bg-ink px-4 py-3 text-white shadow-lift">
+      <p className="num text-sm font-semibold">
+        {count} {itemLabel}
+        {count === 1 ? '' : 's'} selected{detail ? ` · ${detail}` : ''}
+      </p>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onClear}
+          aria-label="Clear selection"
+          className="cursor-pointer rounded-full p-1.5 text-white/60 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+        >
+          <X size={16} />
+        </button>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export function EmptyState({
   icon: Icon,
   title,

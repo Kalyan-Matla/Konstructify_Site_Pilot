@@ -2,27 +2,37 @@ import { useState, type FormEvent } from 'react';
 import { CheckCircle2, ClipboardList, Pencil, Plus, Trash2 } from 'lucide-react';
 import type { Priority, TaskStatus, WorkOrder } from '../types';
 import { useApp } from '../contexts/AppContext';
+import { useToast } from '../contexts/ToastContext';
 import {
   Badge,
+  BulkBar,
+  BulkCheckbox,
   ConfirmDialog,
   EmptyState,
   Field,
   FormError,
   Modal,
   PageHeader,
+  SelectAllToggle,
   SyncBadge,
   inputCls,
 } from '../components/ui';
 import { daysUntil, formatDate, isoDaysFromNow, uid } from '../utils/format';
 import { useRouteAction } from '../hooks/useRouteAction';
+import { useBulkSelect } from '../hooks/useBulkSelect';
+import { useBulkDelete } from '../hooks/useBulkDelete';
 
 type Filter = 'all' | TaskStatus | 'overdue';
 
 export default function WorkOrders() {
   const { state, upsert, remove } = useApp();
+  const { toast } = useToast();
   const [filter, setFilter] = useState<Filter>('all');
   const [editing, setEditing] = useState<WorkOrder | 'new' | null>(null);
   const [deleting, setDeleting] = useState<WorkOrder | null>(null);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const { selected, toggle, clear, setAll } = useBulkSelect();
+  const bulkDelete = useBulkDelete<WorkOrder>('workOrder', 'work order');
 
   useRouteAction({ openNew: () => setEditing('new') });
 
@@ -34,6 +44,16 @@ export default function WorkOrders() {
 
   const markComplete = (w: WorkOrder) => {
     upsert('workOrder', { ...w, status: 'complete' }, `Work order ${w.orderNumber} completed`);
+  };
+
+  const bulkMarkComplete = () => {
+    const items = state.workOrders.filter((w) => selected.has(w.id) && w.status !== 'complete');
+    if (items.length === 0) return;
+    for (const w of items) {
+      upsert('workOrder', { ...w, status: 'complete' }, `Work order ${w.orderNumber} completed`, { silent: true });
+    }
+    toast(`${items.length} work order${items.length === 1 ? '' : 's'} marked complete`, { tone: 'success' });
+    clear();
   };
 
   return (
@@ -52,21 +72,43 @@ export default function WorkOrders() {
         }
       />
 
-      <div className="mb-4 flex flex-wrap gap-2" role="group" aria-label="Filter work orders">
-        {(['all', 'pending', 'in-progress', 'complete', 'overdue'] as const).map((f) => (
-          <button
-            key={f}
-            type="button"
-            onClick={() => setFilter(f)}
-            aria-pressed={filter === f}
-            className={`chip capitalize ${
-              filter === f ? 'chip-active' : 'chip-idle'
-            }`}
-          >
-            {f}
-          </button>
-        ))}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Filter work orders">
+          {(['all', 'pending', 'in-progress', 'complete', 'overdue'] as const).map((f) => (
+            <button
+              key={f}
+              type="button"
+              onClick={() => setFilter(f)}
+              aria-pressed={filter === f}
+              className={`chip capitalize ${
+                filter === f ? 'chip-active' : 'chip-idle'
+              }`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+        {orders.length > 0 && (
+          <SelectAllToggle
+            checked={orders.every((w) => selected.has(w.id))}
+            onChange={() => setAll(orders.every((w) => selected.has(w.id)) ? [] : orders.map((w) => w.id))}
+            label="Select all"
+          />
+        )}
       </div>
+
+      <BulkBar count={selected.size} itemLabel="work order" onClear={clear}>
+        <button type="button" onClick={bulkMarkComplete} className="btn-success btn-sm flex items-center gap-1.5">
+          <CheckCircle2 size={14} aria-hidden="true" /> Mark complete
+        </button>
+        <button
+          type="button"
+          onClick={() => setBulkDeleting(true)}
+          className="flex items-center gap-1.5 rounded-xl bg-red-600 px-3 py-1.5 text-xs font-bold text-white transition-[transform,background-color] duration-200 ease-out hover:bg-red-500 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+        >
+          <Trash2 size={14} aria-hidden="true" /> Delete
+        </button>
+      </BulkBar>
 
       {orders.length === 0 ? (
         <EmptyState
@@ -81,15 +123,25 @@ export default function WorkOrders() {
             const project = state.projects.find((p) => p.id === w.projectId);
             const overdue = w.status !== 'complete' && daysUntil(w.dueDate) < 0;
             return (
-              <div key={w.id} className="panel panel-hover p-3 sm:p-4">
+              <div
+                key={w.id}
+                className={`panel panel-hover p-3 sm:p-4 ${selected.has(w.id) ? 'ring-2 ring-amber-500' : ''}`}
+              >
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="font-semibold text-ink">
-                      {w.orderNumber} · {w.taskName}
-                    </p>
-                    <p className="truncate text-xs text-ink/55">
-                      {project?.name ?? 'No project'} · assigned to {w.assignee}
-                    </p>
+                  <div className="flex min-w-0 items-start gap-2">
+                    <BulkCheckbox
+                      checked={selected.has(w.id)}
+                      onChange={() => toggle(w.id)}
+                      ariaLabel={`Select ${w.orderNumber} for bulk actions`}
+                    />
+                    <div className="min-w-0">
+                      <p className="font-semibold text-ink">
+                        {w.orderNumber} · {w.taskName}
+                      </p>
+                      <p className="truncate text-xs text-ink/55">
+                        {project?.name ?? 'No project'} · assigned to {w.assignee}
+                      </p>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge tone={w.priority === 'High' ? 'red' : w.priority === 'Medium' ? 'yellow' : 'gray'}>
@@ -159,6 +211,21 @@ export default function WorkOrders() {
           onConfirm={() => {
             remove('workOrder', deleting.id, `Work order ${deleting.orderNumber} deleted`);
             setDeleting(null);
+          }}
+        />
+      )}
+
+      {bulkDeleting && (
+        <ConfirmDialog
+          title={`Delete ${selected.size} work order${selected.size === 1 ? '' : 's'}?`}
+          message="This can be undone from the confirmation toast."
+          confirmLabel={`Delete ${selected.size}`}
+          onCancel={() => setBulkDeleting(false)}
+          onConfirm={() => {
+            const items = state.workOrders.filter((w) => selected.has(w.id));
+            bulkDelete(items, (w) => `Work order ${w.orderNumber} deleted`);
+            setBulkDeleting(false);
+            clear();
           }}
         />
       )}

@@ -5,6 +5,8 @@ import { useApp } from '../contexts/AppContext';
 import {
   AICard,
   Badge,
+  BulkBar,
+  BulkCheckbox,
   ConfirmDialog,
   EmptyState,
   Field,
@@ -17,6 +19,8 @@ import {
 import { suggestBudget } from '../utils/ai-suggestions';
 import { formatINR, uid } from '../utils/format';
 import { useRouteAction } from '../hooks/useRouteAction';
+import { useBulkSelect } from '../hooks/useBulkSelect';
+import { useBulkDelete } from '../hooks/useBulkDelete';
 
 const UNITS = ['LS', 'm³', 'sqft', 'MT', 'bags', 'pcs', 'days'];
 
@@ -25,7 +29,10 @@ export default function Budgeting() {
   const [projectId, setProjectId] = useState(state.projects[0]?.id ?? '');
   const [editing, setEditing] = useState<BudgetItem | 'new' | null>(null);
   const [deleting, setDeleting] = useState<BudgetItem | null>(null);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [aiDismissed, setAiDismissed] = useState(false);
+  const { selected, toggle, clear, setAll } = useBulkSelect();
+  const bulkDelete = useBulkDelete<BudgetItem>('budgetItem', 'BOQ item');
 
   useRouteAction({ openNew: () => setEditing('new') });
 
@@ -58,7 +65,10 @@ export default function Budgeting() {
           id="bq-project"
           className="rounded-xl border border-ink/15 bg-white px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
           value={projectId}
-          onChange={(e) => setProjectId(e.target.value)}
+          onChange={(e) => {
+            setProjectId(e.target.value);
+            clear();
+          }}
         >
           {state.projects.map((p) => (
             <option key={p.id} value={p.id}>{p.name}</option>
@@ -79,6 +89,16 @@ export default function Budgeting() {
 
       {ai && !aiDismissed && <AICard suggestion={ai} onDismiss={() => setAiDismissed(true)} />}
 
+      <BulkBar count={selected.size} itemLabel="BOQ item" onClear={clear}>
+        <button
+          type="button"
+          onClick={() => setBulkDeleting(true)}
+          className="flex items-center gap-1.5 rounded-xl bg-red-600 px-3 py-1.5 text-xs font-bold text-white transition-[transform,background-color] duration-200 ease-out hover:bg-red-500 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+        >
+          <Trash2 size={14} aria-hidden="true" /> Delete
+        </button>
+      </BulkBar>
+
       {items.length === 0 ? (
         <EmptyState
           icon={IndianRupee}
@@ -88,9 +108,18 @@ export default function Budgeting() {
         />
       ) : (
         <div className="overflow-x-auto panel">
-          <table className="w-full min-w-[680px] text-sm">
+          <table className="w-full min-w-[720px] text-sm">
             <thead>
               <tr className="border-b border-ink/10 bg-paper-soft text-left text-[11px] font-bold uppercase tracking-wider text-ink/60">
+                <th scope="col" className="w-10 px-4 py-2.5">
+                  <BulkCheckbox
+                    checked={items.length > 0 && items.every((b) => selected.has(b.id))}
+                    onChange={() =>
+                      setAll(items.every((b) => selected.has(b.id)) ? [] : items.map((b) => b.id))
+                    }
+                    ariaLabel="Select all BOQ items"
+                  />
+                </th>
                 <th scope="col" className="px-4 py-2.5">Item</th>
                 <th scope="col" className="px-4 py-2.5 text-right">Qty</th>
                 <th scope="col" className="px-4 py-2.5 text-right">Rate</th>
@@ -107,7 +136,17 @@ export default function Budgeting() {
                 const pct = estimate > 0 ? (variance / estimate) * 100 : 0;
                 const overrun = estimate > 0 && variance > 0.1 * estimate;
                 return (
-                  <tr key={b.id} className="border-b border-ink/10 transition-colors last:border-0 hover:bg-paper-soft">
+                  <tr
+                    key={b.id}
+                    className={`border-b border-ink/10 transition-colors last:border-0 hover:bg-paper-soft ${selected.has(b.id) ? 'bg-amber-50' : ''}`}
+                  >
+                    <td className="px-4 py-2.5">
+                      <BulkCheckbox
+                        checked={selected.has(b.id)}
+                        onChange={() => toggle(b.id)}
+                        ariaLabel={`Select ${b.description} for bulk actions`}
+                      />
+                    </td>
                     <td className="px-4 py-2.5">
                       <p className="font-medium text-ink">{b.description}</p>
                       <SyncBadge entity="budgetItem" id={b.id} />
@@ -165,6 +204,21 @@ export default function Budgeting() {
           onConfirm={() => {
             remove('budgetItem', deleting.id, `BOQ item "${deleting.description}" deleted`);
             setDeleting(null);
+          }}
+        />
+      )}
+
+      {bulkDeleting && (
+        <ConfirmDialog
+          title={`Delete ${selected.size} BOQ item${selected.size === 1 ? '' : 's'}?`}
+          message="They'll be removed from this project's BOQ. This can be undone from the confirmation toast."
+          confirmLabel={`Delete ${selected.size}`}
+          onCancel={() => setBulkDeleting(false)}
+          onConfirm={() => {
+            const toRemove = items.filter((b) => selected.has(b.id));
+            bulkDelete(toRemove, (b) => `BOQ item "${b.description}" deleted`);
+            setBulkDeleting(false);
+            clear();
           }}
         />
       )}
