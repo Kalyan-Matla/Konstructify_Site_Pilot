@@ -7,6 +7,7 @@ import {
   ConfirmDialog,
   EmptyState,
   Field,
+  FormError,
   Modal,
   PageHeader,
   SyncBadge,
@@ -200,7 +201,7 @@ function WorkOrderForm({
   return (
     <Modal title={order ? `Edit ${order.orderNumber}` : 'New work order'} onClose={onClose}>
       <form onSubmit={submit} noValidate>
-        {error && <p role="alert" className="mb-3 rounded bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+        <FormError message={error} />
         <Field label="Task name" htmlFor="wo-name" required>
           <input id="wo-name" className={inputCls} value={taskName} onChange={(e) => setTaskName(e.target.value)} required />
         </Field>

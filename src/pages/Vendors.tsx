@@ -9,6 +9,7 @@ import {
   ConfirmDialog,
   EmptyState,
   Field,
+  FormError,
   Modal,
   PageHeader,
   ProgressBar,
@@ -31,16 +32,16 @@ type CategoryFilter = 'all' | VendorCategory;
 type HealthFilter = 'all' | CreditHealth;
 
 export function healthBadge(health: CreditHealth, overdue: boolean) {
-  if (overdue) return <Badge tone="red">overdue</Badge>;
+  if (overdue) return <Badge tone="red" title="Has an unpaid invoice past its due date">overdue</Badge>;
   switch (health) {
     case 'maxed':
-      return <Badge tone="red">maxed out</Badge>;
+      return <Badge tone="red" title="Over 95% of the credit line is used">maxed out</Badge>;
     case 'high':
-      return <Badge tone="orange">almost full</Badge>;
+      return <Badge tone="orange" title="80–95% of the credit line is used">almost full</Badge>;
     case 'warning':
-      return <Badge tone="yellow">getting full</Badge>;
+      return <Badge tone="yellow" title="50–80% of the credit line is used">getting full</Badge>;
     default:
-      return <Badge tone="green">healthy</Badge>;
+      return <Badge tone="green" title="Under 50% of the credit line is used">healthy</Badge>;
   }
 }
 
@@ -238,7 +239,7 @@ function VendorForm({
   return (
     <Modal title={vendor ? 'Edit vendor' : 'Add vendor'} onClose={onClose}>
       <form onSubmit={submit} noValidate>
-        {error && <p role="alert" className="mb-3 rounded bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+        <FormError message={error} />
         <Field label="Vendor name" htmlFor="vn-name" required>
           <input id="vn-name" className={inputCls} value={name} onChange={(e) => setName(e.target.value)} required />
         </Field>

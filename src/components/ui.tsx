@@ -6,9 +6,11 @@ import { useApp } from '../contexts/AppContext';
 
 export function Badge({
   tone,
+  title,
   children,
 }: {
   tone: 'green' | 'yellow' | 'orange' | 'red' | 'blue' | 'gray';
+  title?: string;
   children: ReactNode;
 }) {
   const tones: Record<string, string> = {
@@ -21,8 +23,10 @@ export function Badge({
   };
   return (
     <span
+      title={title}
       className={clsx(
         'inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide ring-1 ring-inset',
+        title && 'cursor-help',
         tones[tone],
       )}
     >
@@ -222,6 +226,26 @@ export function Field({
 
 export const inputCls =
   'w-full rounded-xl border border-ink/15 bg-white px-3.5 py-2.5 text-sm text-ink shadow-sm transition-colors focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/40';
+
+/** Form error banner that takes focus when it appears (WCAG: announce + move
+ *  focus to the error on failed submit). Standardizes error styling too. */
+export function FormError({ message }: { message: string }) {
+  const ref = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    if (message) ref.current?.focus();
+  }, [message]);
+  if (!message) return null;
+  return (
+    <p
+      ref={ref}
+      tabIndex={-1}
+      role="alert"
+      className="mb-3 rounded-xl bg-red-50 px-3.5 py-2.5 text-sm font-medium text-red-700 ring-1 ring-inset ring-red-600/15 focus:outline-none focus:ring-2 focus:ring-red-500/40"
+    >
+      {message}
+    </p>
+  );
+}
 
 export function PageHeader({
   title,

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
 import { AICard, Badge, PageHeader, Ring } from '../components/ui';
@@ -55,6 +56,20 @@ export default function Credits() {
         <p className="relative mt-2 text-xs font-semibold uppercase tracking-wider text-white/55">
           {((totalUsed / Math.max(totalLimit, 1)) * 100).toFixed(0)}% of the network drawn
         </p>
+      </div>
+
+      {/* Inline legend — teaches the aging buckets + health thresholds */}
+      <div className="mb-5 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border border-ink/10 bg-white/60 px-4 py-2.5 text-xs text-ink/60">
+        <span className="flex items-center gap-1.5">
+          <Info size={13} className="text-ink/40" aria-hidden="true" />
+          <span className="font-semibold text-ink/75">Aging = days since each unpaid invoice</span>
+        </span>
+        <span>&lt;30d / 30–60d / 60–90d / 90d+ outstanding</span>
+        <span className="hidden items-center gap-1.5 sm:flex">
+          <span className="h-2 w-2 rounded-full bg-amber-500" aria-hidden="true" /> &gt;50% used
+          <span className="ml-2 h-2 w-2 rounded-full bg-orange-500" aria-hidden="true" /> &gt;80%
+          <span className="ml-2 h-2 w-2 rounded-full bg-red-500" aria-hidden="true" /> &gt;95% maxed
+        </span>
       </div>
 
       {suggestions.slice(0, 2).map((s) => (

@@ -8,6 +8,7 @@ import {
   ConfirmDialog,
   EmptyState,
   Field,
+  FormError,
   Modal,
   PageHeader,
   SyncBadge,
@@ -216,7 +217,7 @@ function BudgetForm({
   return (
     <Modal title={item ? 'Edit BOQ item' : 'New BOQ item'} onClose={onClose}>
       <form onSubmit={submit} noValidate>
-        {error && <p role="alert" className="mb-3 rounded bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+        <FormError message={error} />
         <Field label="Item description" htmlFor="bq-desc" required>
           <input id="bq-desc" className={inputCls} value={description} onChange={(e) => setDescription(e.target.value)} required />
         </Field>
