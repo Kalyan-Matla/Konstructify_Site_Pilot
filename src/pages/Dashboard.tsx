@@ -30,6 +30,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [aiDismissed, setAiDismissed] = useState(false);
+  const [showAllAlerts, setShowAllAlerts] = useState(false);
 
   const payables30 = totalPayablesDueWithin(30, state.invoices);
   const payables7 = totalPayablesDueWithin(7, state.invoices);
@@ -74,8 +75,11 @@ export default function Dashboard() {
     if (pendingCount > 0) {
       out.push({ id: 'sync', tone: 'yellow', message: `${pendingCount} change${pendingCount === 1 ? '' : 's'} waiting to sync` });
     }
-    return out.filter((a) => !dismissed.has(a.id)).slice(0, 5);
+    return out.filter((a) => !dismissed.has(a.id));
   }, [state, pendingCount, dismissed]);
+
+  const visibleAlerts = showAllAlerts ? alerts : alerts.slice(0, 3);
+  const hiddenAlertCount = alerts.length - visibleAlerts.length;
 
   const ai = useMemo(() => suggestDashboard(state), [state]);
 
@@ -116,7 +120,7 @@ export default function Dashboard() {
       {/* Alerts */}
       {alerts.length > 0 && (
         <div className="stagger mb-6 space-y-2" aria-label="Alerts">
-          {alerts.map((a) => (
+          {visibleAlerts.map((a) => (
             <div
               key={a.id}
               className={clsx(
@@ -149,6 +153,15 @@ export default function Dashboard() {
               </button>
             </div>
           ))}
+          {(hiddenAlertCount > 0 || showAllAlerts) && alerts.length > 3 && (
+            <button
+              type="button"
+              onClick={() => setShowAllAlerts((v) => !v)}
+              className="cursor-pointer text-xs font-bold text-ink/50 transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+            >
+              {showAllAlerts ? 'Show fewer' : `Show ${hiddenAlertCount} more`}
+            </button>
+          )}
         </div>
       )}
 

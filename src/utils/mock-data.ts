@@ -12,6 +12,13 @@ function inv(
   status: InvoiceStatus,
   notes: string,
   paymentMode: PaymentMode | null = null,
+  /** Days before the invoice's own due date it was paid — positive is early/
+   *  on-time, negative is late. Relative to dueDate (not "today"), since
+   *  seeded due dates sit anywhere from weeks ago to weeks out; a fixed
+   *  "paid 2 days ago" made every settled invoice in the demo look late
+   *  against its (often much older) due date, so every vendor's "paid on
+   *  time" scorecard read 0%. Defaults to a few days early. */
+  paidDaysBeforeDue = 3,
 ): Invoice {
   return {
     id,
@@ -23,7 +30,7 @@ function inv(
     dueDate: isoDaysFromNow(dueInDays),
     status,
     paymentMode: status === 'unpaid' ? null : paymentMode ?? 'NEFT',
-    paymentDate: status === 'unpaid' ? null : isoDaysFromNow(-2),
+    paymentDate: status === 'unpaid' ? null : isoDaysFromNow(dueInDays - paidDaysBeforeDue),
     notes,
   };
 }
@@ -79,7 +86,7 @@ export function buildMockState(): AppState {
       inv('i2', 'v1', 'p1', 'ABC-44', 2_00_000, 34, -20, 'unpaid', 'RMC week 1 — disputed quantity'),
       inv('i3', 'v1', 'p2', 'ABC-46', 50_000, 5, 9, 'unpaid', 'Test cubes + pump charges'),
       inv('i4', 'v1', 'p1', 'ABC-42', 3_00_000, 40, -26, 'paid', 'RMC slab casting', 'RTGS'),
-      inv('i5', 'v1', 'p1', 'ABC-41', 1_50_000, 48, -34, 'paid', 'RMC footing', 'NEFT'),
+      inv('i5', 'v1', 'p1', 'ABC-41', 1_50_000, 48, -34, 'paid', 'RMC footing', 'NEFT', -5),
       // DEF Steel (~₹3L of ₹8L)
       inv('i6', 'v2', 'p1', 'DEF-101', 1_00_000, 8, 10, 'unpaid', 'TMT bars 12mm'),
       inv('i7', 'v2', 'p2', 'DEF-102', 2_00_000, 4, 14, 'unpaid', 'Structural steel sections'),
@@ -96,7 +103,7 @@ export function buildMockState(): AppState {
       inv('i15', 'v5', 'p1', 'MNO-310', 2_50_000, 15, 0, 'unpaid', 'Mason gang — March'),
       inv('i16', 'v5', 'p1', 'MNO-311', 2_00_000, 7, 7, 'unpaid', 'Shuttering crew'),
       inv('i17', 'v5', 'p2', 'MNO-312', 2_50_000, 3, 11, 'unpaid', 'Excavation labour'),
-      inv('i18', 'v5', 'p1', 'MNO-308', 1_50_000, 35, -28, 'paid', 'Site clearing', 'NEFT'),
+      inv('i18', 'v5', 'p1', 'MNO-308', 1_50_000, 35, -28, 'paid', 'Site clearing', 'NEFT', -5),
       // PQR Equipment (~₹4L of ₹10L)
       inv('i19', 'v6', 'p2', 'PQR-55', 2_50_000, 9, 5, 'unpaid', 'Crane rental — 2 weeks'),
       inv('i20', 'v6', 'p1', 'PQR-56', 1_50_000, 5, 9, 'unpaid', 'Concrete pump + vibrators'),
@@ -110,9 +117,9 @@ export function buildMockState(): AppState {
       inv('i26', 'v8', 'p1', 'VWX-198', 60_000, 32, -27, 'paid', 'Debris removal', 'NEFT'),
       // A few more settled invoices for history
       inv('i27', 'v5', 'p2', 'MNO-305', 1_20_000, 42, -35, 'paid', 'Mobilization labour', 'NEFT'),
-      inv('i28', 'v2', 'p2', 'DEF-95', 90_000, 44, -40, 'paid', 'Binding wire + mesh', 'NEFT'),
+      inv('i28', 'v2', 'p2', 'DEF-95', 90_000, 44, -40, 'paid', 'Binding wire + mesh', 'NEFT', -5),
       inv('i29', 'v3', 'p1', 'GHI-15', 40_000, 50, -20, 'paid', 'Temporary site power', 'Cheque'),
-      inv('i30', 'v6', 'p2', 'PQR-49', 70_000, 47, -33, 'paid', 'Scaffolding rental', 'NEFT'),
+      inv('i30', 'v6', 'p2', 'PQR-49', 70_000, 47, -33, 'paid', 'Scaffolding rental', 'NEFT', -5),
     ],
     tasks: [
       { id: 't1', projectId: 'p1', name: 'Foundation excavation', description: 'Excavate and level foundation to -2.4m', phase: 'Foundation', assignedTo: 'Site Lead', status: 'complete', dueDate: isoDaysFromNow(-5), percentComplete: 100, photos: [], createdAt: isoDaysFromNow(-28) },
