@@ -17,6 +17,7 @@ import {
 } from '../components/ui';
 import { suggestWorkStatus } from '../utils/ai-suggestions';
 import { daysUntil, formatDate, isoDaysFromNow, todayISO, uid } from '../utils/format';
+import { useRouteAction } from '../hooks/useRouteAction';
 
 type Filter = 'all' | TaskStatus;
 
@@ -58,6 +59,8 @@ export default function WorkStatus() {
   const [editing, setEditing] = useState<WorkTask | 'new' | null>(null);
   const [viewing, setViewing] = useState<string | null>(null); // task id (live lookup)
   const [deleting, setDeleting] = useState<WorkTask | null>(null);
+
+  useRouteAction({ openNew: () => setEditing('new'), openView: (id) => setViewing(id) });
 
   const tasks = state.tasks.filter(
     (t) =>

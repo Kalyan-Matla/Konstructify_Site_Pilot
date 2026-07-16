@@ -2,6 +2,7 @@ import { useMemo, useState, type FormEvent } from 'react';
 import { FolderOpen, Pencil, Plus, Trash2 } from 'lucide-react';
 import type { Project, ProjectStatus } from '../types';
 import { useApp } from '../contexts/AppContext';
+import { useRouteAction } from '../hooks/useRouteAction';
 import {
   Badge,
   ConfirmDialog,
@@ -27,6 +28,14 @@ export default function Projects() {
   const [editing, setEditing] = useState<Project | 'new' | null>(null);
   const [viewing, setViewing] = useState<Project | null>(null);
   const [deleting, setDeleting] = useState<Project | null>(null);
+
+  useRouteAction({
+    openNew: () => setEditing('new'),
+    openView: (id) => {
+      const p = state.projects.find((x) => x.id === id);
+      if (p) setViewing(p);
+    },
+  });
 
   const projects = state.projects.filter((p) => filter === 'all' || p.status === filter);
 

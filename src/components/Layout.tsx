@@ -10,6 +10,7 @@ import {
   LogOut,
   Menu,
   RotateCcw,
+  Search,
   Users,
   Wallet,
   Wifi,
@@ -20,8 +21,9 @@ import { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { useApp } from '../contexts/AppContext';
 import { useAuth } from '../contexts/AuthContext';
+import CommandPalette from './CommandPalette';
 
-const NAV = [
+export const NAV = [
   { name: 'Dashboard', path: '/', icon: LayoutDashboard },
   { name: 'Projects', path: '/projects', icon: FolderOpen },
   { name: 'Vendors', path: '/vendors', icon: Users },
@@ -46,6 +48,7 @@ export default function Layout() {
   const { user, logout } = useAuth();
   const [moreOpen, setMoreOpen] = useState(false);
   const [userMenu, setUserMenu] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -56,6 +59,19 @@ export default function Layout() {
     document.addEventListener('mousedown', onClick);
     return () => document.removeEventListener('mousedown', onClick);
   }, [userMenu]);
+
+  // Global ⌘K / Ctrl+K — reachable from anywhere in the app, not just via the
+  // visible trigger button (Flexibility & Efficiency for daily/power users).
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen((v) => !v);
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   const initials = user
     ? user.name.split(' ').map((w) => w[0]).join('').slice(0, 2)
@@ -79,6 +95,18 @@ export default function Layout() {
             <span className="font-display text-xl tracking-tight text-ink">Konstructify</span>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setPaletteOpen(true)}
+              aria-label="Open command palette — search or jump to a page"
+              className="flex cursor-pointer items-center gap-2 rounded-full border border-ink/12 bg-white px-3 py-1.5 text-xs font-semibold text-ink/55 transition-colors hover:border-ink/25 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+            >
+              <Search size={14} aria-hidden="true" />
+              <span className="hidden sm:inline">Search…</span>
+              <kbd className="hidden rounded border border-ink/15 bg-paper-soft px-1.5 py-0.5 font-sans text-[10px] font-bold text-ink/45 sm:inline">
+                ⌘K
+              </kbd>
+            </button>
             <span aria-live="polite" className="num hidden text-xs font-bold text-ink/60 sm:inline">
               {syncLabel}
             </span>
@@ -315,6 +343,8 @@ export default function Layout() {
           </div>
         </div>
       )}
+
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>
   );
 }

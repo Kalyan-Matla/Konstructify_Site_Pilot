@@ -14,6 +14,7 @@ import {
   inputCls,
 } from '../components/ui';
 import { daysUntil, formatDate, isoDaysFromNow, uid } from '../utils/format';
+import { useRouteAction } from '../hooks/useRouteAction';
 
 type Filter = 'all' | TaskStatus | 'overdue';
 
@@ -22,6 +23,8 @@ export default function WorkOrders() {
   const [filter, setFilter] = useState<Filter>('all');
   const [editing, setEditing] = useState<WorkOrder | 'new' | null>(null);
   const [deleting, setDeleting] = useState<WorkOrder | null>(null);
+
+  useRouteAction({ openNew: () => setEditing('new') });
 
   const orders = state.workOrders.filter((w) => {
     if (filter === 'all') return true;

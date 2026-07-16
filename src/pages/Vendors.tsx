@@ -27,6 +27,7 @@ import {
 } from '../utils/derive';
 import { suggestVendor } from '../utils/ai-suggestions';
 import { formatDate, formatINR, uid } from '../utils/format';
+import { useRouteAction } from '../hooks/useRouteAction';
 
 type CategoryFilter = 'all' | VendorCategory;
 type HealthFilter = 'all' | CreditHealth;
@@ -52,6 +53,14 @@ export default function Vendors() {
   const [editing, setEditing] = useState<Vendor | 'new' | null>(null);
   const [viewing, setViewing] = useState<Vendor | null>(null);
   const [deleting, setDeleting] = useState<Vendor | null>(null);
+
+  useRouteAction({
+    openNew: () => setEditing('new'),
+    openView: (id) => {
+      const v = state.vendors.find((x) => x.id === id);
+      if (v) setViewing(v);
+    },
+  });
 
   const vendors = state.vendors.filter(
     (v) =>

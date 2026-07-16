@@ -16,6 +16,7 @@ import {
 } from '../components/ui';
 import { suggestBudget } from '../utils/ai-suggestions';
 import { formatINR, uid } from '../utils/format';
+import { useRouteAction } from '../hooks/useRouteAction';
 
 const UNITS = ['LS', 'm³', 'sqft', 'MT', 'bags', 'pcs', 'days'];
 
@@ -25,6 +26,8 @@ export default function Budgeting() {
   const [editing, setEditing] = useState<BudgetItem | 'new' | null>(null);
   const [deleting, setDeleting] = useState<BudgetItem | null>(null);
   const [aiDismissed, setAiDismissed] = useState(false);
+
+  useRouteAction({ openNew: () => setEditing('new') });
 
   const project = state.projects.find((p) => p.id === projectId);
   const items = state.budgetItems.filter((b) => b.projectId === projectId);

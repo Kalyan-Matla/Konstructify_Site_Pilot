@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { addDays, format, parseISO } from 'date-fns';
-import { AlertTriangle, CheckCircle2, FileText, Plus, Send, Trash2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, FileText, Plus, Send, Trash2, X } from 'lucide-react';
 import type { Invoice, InvoiceStatus, PaymentMode, Vendor } from '../types';
 import { useApp } from '../contexts/AppContext';
 import {
@@ -18,6 +18,8 @@ import {
 import { creditAvailable, creditUsagePercent } from '../utils/derive';
 import { suggestPayment } from '../utils/ai-suggestions';
 import { daysSince, daysUntil, formatDate, formatINR, todayISO, uid } from '../utils/format';
+import { useRouteAction } from '../hooks/useRouteAction';
+import { useToast } from '../contexts/ToastContext';
 
 type Filter = 'all' | InvoiceStatus | 'overdue';
 
@@ -44,6 +46,10 @@ export default function Payments() {
   const [paying, setPaying] = useState<Invoice | null>(null);
   const [deleting, setDeleting] = useState<Invoice | null>(null);
   const [aiDismissed, setAiDismissed] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkPaying, setBulkPaying] = useState(false);
+
+  useRouteAction({ openNew: () => setCreating(true) });
 
   const invoices = useMemo(
     () =>
@@ -68,6 +74,20 @@ export default function Payments() {
     );
   };
 
+  const toggleSelect = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const unpaidVisible = invoices.filter((i) => i.status === 'unpaid');
+  const allVisibleSelected = unpaidVisible.length > 0 && unpaidVisible.every((i) => selected.has(i.id));
+  const selectedInvoices = state.invoices.filter((i) => selected.has(i.id));
+  const selectedTotal = selectedInvoices.reduce((s, i) => s + i.amount, 0);
+
   return (
     <div>
       <PageHeader
@@ -86,21 +106,57 @@ export default function Payments() {
 
       {ai && !aiDismissed && <AICard suggestion={ai} onDismiss={() => setAiDismissed(true)} />}
 
-      <div className="mb-4 flex flex-wrap gap-2" role="group" aria-label="Filter invoices">
-        {(['all', 'unpaid', 'overdue', 'payment-sent', 'paid'] as const).map((f) => (
-          <button
-            key={f}
-            type="button"
-            onClick={() => setFilter(f)}
-            aria-pressed={filter === f}
-            className={`chip capitalize ${
-              filter === f ? 'chip-active' : 'chip-idle'
-            }`}
-          >
-            {f}
-          </button>
-        ))}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Filter invoices">
+          {(['all', 'unpaid', 'overdue', 'payment-sent', 'paid'] as const).map((f) => (
+            <button
+              key={f}
+              type="button"
+              onClick={() => setFilter(f)}
+              aria-pressed={filter === f}
+              className={`chip capitalize ${
+                filter === f ? 'chip-active' : 'chip-idle'
+              }`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+        {unpaidVisible.length > 0 && (
+          <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-ink/55">
+            <input
+              type="checkbox"
+              checked={allVisibleSelected}
+              onChange={() =>
+                setSelected(allVisibleSelected ? new Set() : new Set(unpaidVisible.map((i) => i.id)))
+              }
+              className="h-4 w-4 rounded accent-amber-500"
+            />
+            Select all unpaid
+          </label>
+        )}
       </div>
+
+      {selected.size > 0 && (
+        <div className="animate-fade-up mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-ink px-4 py-3 text-white shadow-lift">
+          <p className="num text-sm font-semibold">
+            {selected.size} invoice{selected.size === 1 ? '' : 's'} selected · {formatINR(selectedTotal)}
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setSelected(new Set())}
+              className="cursor-pointer rounded-full p-1.5 text-white/60 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+              aria-label="Clear selection"
+            >
+              <X size={16} />
+            </button>
+            <button type="button" onClick={() => setBulkPaying(true)} className="btn-primary btn-sm flex items-center gap-1.5">
+              <Send size={14} aria-hidden="true" /> Pay selected
+            </button>
+          </div>
+        </div>
+      )}
 
       {invoices.length === 0 ? (
         <EmptyState
@@ -114,16 +170,31 @@ export default function Payments() {
           {invoices.map((i) => {
             const vendor = state.vendors.find((v) => v.id === i.vendorId);
             const project = state.projects.find((p) => p.id === i.projectId);
+            const isSelectable = i.status === 'unpaid';
             return (
-              <div key={i.id} className="panel panel-hover p-3 sm:p-4">
+              <div
+                key={i.id}
+                className={`panel panel-hover p-3 sm:p-4 ${selected.has(i.id) ? 'ring-2 ring-amber-500' : ''}`}
+              >
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="font-semibold text-ink">
-                      {i.invoiceNumber} · {vendor?.name ?? 'Unknown vendor'}
-                    </p>
-                    <p className="truncate text-xs text-ink/55">
-                      {project?.name ?? 'No project'} · {i.notes || 'no notes'}
-                    </p>
+                  <div className="flex min-w-0 items-start gap-3">
+                    {isSelectable && (
+                      <input
+                        type="checkbox"
+                        checked={selected.has(i.id)}
+                        onChange={() => toggleSelect(i.id)}
+                        aria-label={`Select invoice ${i.invoiceNumber} for bulk payment`}
+                        className="mt-1 h-4 w-4 shrink-0 rounded accent-amber-500"
+                      />
+                    )}
+                    <div className="min-w-0">
+                      <p className="font-semibold text-ink">
+                        {i.invoiceNumber} · {vendor?.name ?? 'Unknown vendor'}
+                      </p>
+                      <p className="truncate text-xs text-ink/55">
+                        {project?.name ?? 'No project'} · {i.notes || 'no notes'}
+                      </p>
+                    </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-base font-bold text-ink">{formatINR(i.amount)}</span>
@@ -173,6 +244,16 @@ export default function Payments() {
 
       {creating && <InvoiceForm onClose={() => setCreating(false)} />}
       {paying && <PaymentModal invoice={paying} onClose={() => setPaying(null)} />}
+      {bulkPaying && (
+        <BulkPayModal
+          invoices={selectedInvoices}
+          onClose={() => setBulkPaying(false)}
+          onDone={() => {
+            setBulkPaying(false);
+            setSelected(new Set());
+          }}
+        />
+      )}
       {deleting && (
         <ConfirmDialog
           title="Delete invoice?"
@@ -364,6 +445,94 @@ function PaymentModal({ invoice, onClose }: { invoice: Invoice; onClose: () => v
           </button>
           <button type="submit" className="btn-primary">
             Schedule payment
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function BulkPayModal({
+  invoices,
+  onClose,
+  onDone,
+}: {
+  invoices: Invoice[];
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const { state, upsert } = useApp();
+  const { toast } = useToast();
+  const [mode, setMode] = useState<PaymentMode>('NEFT');
+  const [payOn, setPayOn] = useState(todayISO());
+  const total = invoices.reduce((s, i) => s + i.amount, 0);
+
+  const modes: Array<{ value: PaymentMode; label: string; hint: string }> = [
+    { value: 'NEFT', label: 'NEFT', hint: 'Settles in 2–4 hrs' },
+    { value: 'RTGS', label: 'RTGS', hint: '30 mins, any amount, higher fee' },
+    { value: 'Cheque', label: 'Cheque', hint: '3–5 days to clear' },
+  ];
+
+  const schedule = (e: FormEvent) => {
+    e.preventDefault();
+    for (const invoice of invoices) {
+      const vendor = state.vendors.find((v) => v.id === invoice.vendorId);
+      upsert(
+        'invoice',
+        { ...invoice, status: 'payment-sent', paymentMode: mode, paymentDate: payOn },
+        `Payment of ${formatINR(invoice.amount)} scheduled to ${vendor?.name ?? 'vendor'} via ${mode}`,
+        { silent: true },
+      );
+    }
+    toast(`${invoices.length} payment${invoices.length === 1 ? '' : 's'} scheduled via ${mode} — ${formatINR(total)} total`, {
+      tone: 'success',
+    });
+    onDone();
+  };
+
+  return (
+    <Modal title={`Pay ${invoices.length} invoice${invoices.length === 1 ? '' : 's'}`} onClose={onClose}>
+      <form onSubmit={schedule}>
+        <ul className="mb-3 max-h-40 space-y-1 overflow-y-auto rounded-xl bg-paper-soft p-3 text-sm">
+          {invoices.map((i) => {
+            const vendor = state.vendors.find((v) => v.id === i.vendorId);
+            return (
+              <li key={i.id} className="flex items-center justify-between text-ink/75">
+                <span className="truncate">{i.invoiceNumber} · {vendor?.name ?? 'Unknown vendor'}</span>
+                <span className="num shrink-0 pl-2 font-semibold text-ink">{formatINR(i.amount)}</span>
+              </li>
+            );
+          })}
+        </ul>
+        <p className="num mb-4 text-sm font-bold text-ink">Total: {formatINR(total)}</p>
+        <fieldset>
+          <legend className="mb-2 text-sm font-medium text-ink/80">Payment mode</legend>
+          <div className="stagger space-y-2">
+            {modes.map((m) => (
+              <label key={m.value} className="flex cursor-pointer items-center gap-3 rounded-md border border-ink/10 p-3 has-[:checked]:border-amber-500 has-[:checked]:bg-amber-50">
+                <input
+                  type="radio"
+                  name="bulk-pay-mode"
+                  value={m.value}
+                  checked={mode === m.value}
+                  onChange={() => setMode(m.value)}
+                  className="h-4 w-4 accent-amber-500"
+                />
+                <span className="text-sm font-semibold text-ink">{m.label}</span>
+                <span className="text-xs text-ink/55">{m.hint}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+        <Field label="Pay on" htmlFor="bulk-pay-date">
+          <input id="bulk-pay-date" type="date" className={inputCls} value={payOn} onChange={(e) => setPayOn(e.target.value)} />
+        </Field>
+        <div className="mt-4 flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="btn-ghost">
+            Cancel
+          </button>
+          <button type="submit" className="btn-primary">
+            Schedule {invoices.length} payment{invoices.length === 1 ? '' : 's'}
           </button>
         </div>
       </form>
