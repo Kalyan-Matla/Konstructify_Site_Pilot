@@ -123,7 +123,7 @@ export default function Payments() {
           ))}
         </div>
         {unpaidVisible.length > 0 && (
-          <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-ink/55">
+          <label className="-my-3.5 flex cursor-pointer items-center gap-2 py-3.5 text-xs font-semibold text-ink/55">
             <input
               type="checkbox"
               checked={allVisibleSelected}
@@ -177,15 +177,17 @@ export default function Payments() {
                 className={`panel panel-hover p-3 sm:p-4 ${selected.has(i.id) ? 'ring-2 ring-amber-500' : ''}`}
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex min-w-0 items-start gap-3">
+                  <div className="flex min-w-0 items-start gap-2">
                     {isSelectable && (
-                      <input
-                        type="checkbox"
-                        checked={selected.has(i.id)}
-                        onChange={() => toggleSelect(i.id)}
-                        aria-label={`Select invoice ${i.invoiceNumber} for bulk payment`}
-                        className="mt-1 h-4 w-4 shrink-0 rounded accent-amber-500"
-                      />
+                      <label className="-m-3.5 flex shrink-0 cursor-pointer items-center p-3.5">
+                        <input
+                          type="checkbox"
+                          checked={selected.has(i.id)}
+                          onChange={() => toggleSelect(i.id)}
+                          aria-label={`Select invoice ${i.invoiceNumber} for bulk payment`}
+                          className="h-4 w-4 rounded accent-amber-500"
+                        />
+                      </label>
                     )}
                     <div className="min-w-0">
                       <p className="font-semibold text-ink">
