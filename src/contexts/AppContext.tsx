@@ -172,7 +172,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       });
       dispatch({
         type: 'activity',
-        item: { id: uid('act'), message: label, timestamp: new Date().toISOString() },
+        item: { id: uid('act'), message: label, timestamp: new Date().toISOString(), entity },
       });
     },
     [],

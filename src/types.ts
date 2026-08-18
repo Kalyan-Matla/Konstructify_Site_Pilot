@@ -96,6 +96,11 @@ export interface ActivityItem {
   id: string;
   message: string;
   timestamp: string; // ISO
+  /** What this entry is about, so the feed can be filtered by capability
+   *  rather than by reading the message text. Added before the activity log
+   *  carries real data — retrofitting it later would mean unparseable
+   *  history. */
+  entity: EntityKind;
 }
 
 export type EntityKind =

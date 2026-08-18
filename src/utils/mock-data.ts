@@ -163,11 +163,11 @@ export function buildMockState(): AppState {
       { id: 'b13', projectId: 'p3', description: 'Interiors & finishing', quantity: 1, unit: 'LS', unitRate: 6_50_000, actualSpend: 0 },
     ],
     activity: [
-      { id: 'a1', message: 'Invoice ABC-45 (₹6L) created for ABC Concrete', timestamp: new Date().toISOString() },
-      { id: 'a2', message: 'Task "Excavation — basement" marked 80%', timestamp: new Date().toISOString() },
-      { id: 'a3', message: 'Payment sent to GHI Electrical (GHI-21, NEFT)', timestamp: new Date().toISOString() },
-      { id: 'a4', message: 'Work order WO-010 completed by VWX Transport', timestamp: new Date().toISOString() },
-      { id: 'a5', message: 'Vendor STU Finishing Works added', timestamp: new Date().toISOString() },
+      { id: 'a1', message: 'Invoice ABC-45 (₹6L) created for ABC Concrete', timestamp: new Date().toISOString(), entity: 'invoice'  },
+      { id: 'a2', message: 'Task "Excavation — basement" marked 80%', timestamp: new Date().toISOString(), entity: 'task'  },
+      { id: 'a3', message: 'Payment sent to GHI Electrical (GHI-21, NEFT)', timestamp: new Date().toISOString(), entity: 'invoice'  },
+      { id: 'a4', message: 'Work order WO-010 completed by VWX Transport', timestamp: new Date().toISOString(), entity: 'workOrder'  },
+      { id: 'a5', message: 'Vendor STU Finishing Works added', timestamp: new Date().toISOString(), entity: 'vendor'  },
     ],
     syncQueue: [],
   };

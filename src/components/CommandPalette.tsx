@@ -55,7 +55,7 @@ function pushRecentId(id: string) {
 
 export default function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { state } = useApp();
-  const { logout } = useAuth();
+  const { can, canReachProject, logout } = useAuth();
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
@@ -86,7 +86,9 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
   };
 
   const items = useMemo<PaletteItem[]>(() => {
-    const pages: PaletteItem[] = NAV.map((n) => ({
+    // Search is a navigation surface, so it obeys the same gate the sidebar
+    // does — otherwise ⌘K becomes a way around the menu.
+    const pages: PaletteItem[] = NAV.filter((n) => can(n.capability)).map((n) => ({
       id: `page-${n.path}`,
       group: 'Pages',
       label: n.name,
@@ -94,16 +96,26 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
       run: () => go(n.path),
     }));
 
-    const quickActions: PaletteItem[] = [
-      { id: 'new-project', group: 'Quick actions', label: 'New project', icon: Plus, run: () => go('/projects', { openNew: true }) },
-      { id: 'new-vendor', group: 'Quick actions', label: 'New vendor', icon: Plus, run: () => go('/vendors', { openNew: true }) },
-      { id: 'new-invoice', group: 'Quick actions', label: 'New invoice', icon: Plus, run: () => go('/payments', { openNew: true }) },
-      { id: 'new-work-order', group: 'Quick actions', label: 'New work order', icon: Plus, run: () => go('/work-orders', { openNew: true }) },
-      { id: 'new-boq', group: 'Quick actions', label: 'New BOQ item', icon: Plus, run: () => go('/budgeting', { openNew: true }) },
-      { id: 'new-task', group: 'Quick actions', label: 'New task', icon: Plus, run: () => go('/work-status', { openNew: true }) },
-    ];
+    const quickActions: PaletteItem[] = (
+      [
+        { id: 'new-project', label: 'New project', cap: 'projects:manage', path: '/projects' },
+        { id: 'new-vendor', label: 'New vendor', cap: 'vendors:manage', path: '/vendors' },
+        { id: 'new-invoice', label: 'New invoice', cap: 'payments:execute', path: '/payments' },
+        { id: 'new-work-order', label: 'New work order', cap: 'work-orders:manage', path: '/work-orders' },
+        { id: 'new-boq', label: 'New BOQ item', cap: 'budgeting:manage', path: '/budgeting' },
+        { id: 'new-task', label: 'New task', cap: 'work-status:manage', path: '/work-status' },
+      ] as const
+    )
+      .filter((a) => can(a.cap))
+      .map((a) => ({
+        id: a.id,
+        group: 'Quick actions',
+        label: a.label,
+        icon: Plus,
+        run: () => go(a.path, { openNew: true }),
+      }));
 
-    const vendors: PaletteItem[] = state.vendors.map((v) => ({
+    const vendors: PaletteItem[] = (can('vendors:view') ? state.vendors : []).map((v) => ({
       id: `vendor-${v.id}`,
       group: 'Vendors',
       label: v.name,
@@ -112,7 +124,11 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
       run: () => go('/vendors', { openView: v.id }),
     }));
 
-    const projects: PaletteItem[] = state.projects.map((p) => ({
+    // Layer 3 — a project-scoped persona must not find, via search, a project
+    // they were never assigned.
+    const reachableProjects = state.projects.filter((p) => canReachProject(p.id));
+
+    const projects: PaletteItem[] = (can('projects:view') ? reachableProjects : []).map((p) => ({
       id: `project-${p.id}`,
       group: 'Projects',
       label: p.name,
@@ -121,7 +137,7 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
       run: () => go('/projects', { openView: p.id }),
     }));
 
-    const invoices: PaletteItem[] = state.invoices.map((i) => {
+    const invoices: PaletteItem[] = (can('payments:view') ? state.invoices : []).map((i) => {
       const vendor = state.vendors.find((v) => v.id === i.vendorId);
       return {
         id: `invoice-${i.id}`,
@@ -133,7 +149,9 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
       };
     });
 
-    const tasks: PaletteItem[] = state.tasks.map((t) => ({
+    const tasks: PaletteItem[] = (
+      can('work-status:view') ? state.tasks.filter((t) => canReachProject(t.projectId)) : []
+    ).map((t) => ({
       id: `task-${t.id}`,
       group: 'Work status',
       label: t.name,
@@ -142,7 +160,9 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
       run: () => go('/work-status', { openView: t.id }),
     }));
 
-    const workOrders: PaletteItem[] = state.workOrders.map((w) => ({
+    const workOrders: PaletteItem[] = (
+      can('work-orders:view') ? state.workOrders.filter((w) => canReachProject(w.projectId)) : []
+    ).map((w) => ({
       id: `wo-${w.id}`,
       group: 'Work orders',
       label: `${w.orderNumber} — ${w.taskName}`,
@@ -157,9 +177,10 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
 
     return [...pages, ...quickActions, ...vendors, ...projects, ...invoices, ...tasks, ...workOrders, ...account];
     // `go`/`onClose`/`logout` are stable closures for our purposes (they call
-    // stable setState setters); only `state` should drive a rebuild.
+    // stable setState setters). `can`/`canReachProject` change identity when
+    // the signed-in user changes, which must rebuild the list.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state]);
+  }, [state, can, canReachProject]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
