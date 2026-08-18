@@ -85,7 +85,10 @@ export default function Payments() {
 
   const unpaidVisible = invoices.filter((i) => i.status === 'unpaid');
   const allVisibleSelected = unpaidVisible.length > 0 && unpaidVisible.every((i) => selected.has(i.id));
-  const selectedInvoices = state.invoices.filter((i) => selected.has(i.id));
+  // Only unpaid invoices are ever selectable, but a selected invoice can be
+  // paid individually while still selected (e.g. via its own row action) —
+  // re-filter by status here so a stale selection can't re-schedule it.
+  const selectedInvoices = state.invoices.filter((i) => selected.has(i.id) && i.status === 'unpaid');
   const selectedTotal = selectedInvoices.reduce((s, i) => s + i.amount, 0);
 
   return (

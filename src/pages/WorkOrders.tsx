@@ -24,6 +24,18 @@ import { useBulkDelete } from '../hooks/useBulkDelete';
 
 type Filter = 'all' | TaskStatus | 'overdue';
 
+/** Next sequential order number, derived from the highest existing suffix —
+ *  not the array length, which collides once any order has been deleted
+ *  (e.g. WO-001..WO-005, delete WO-003, length is 4 → length+1 would
+ *  re-mint the still-existing WO-005). */
+function nextOrderNumber(orders: WorkOrder[]): string {
+  const max = orders.reduce((m, w) => {
+    const n = Number(w.orderNumber.replace(/^WO-/, ''));
+    return Number.isFinite(n) && n > m ? n : m;
+  }, 0);
+  return `WO-${String(max + 1).padStart(3, '0')}`;
+}
+
 export default function WorkOrders() {
   const { state, upsert, remove } = useApp();
   const { toast } = useToast();
@@ -257,7 +269,7 @@ function WorkOrderForm({
     if (!taskName.trim() || !assignee.trim()) return setError('Task name and assignee are required.');
     onSave({
       id: order?.id ?? uid('w'),
-      orderNumber: order?.orderNumber ?? `WO-${String(state.workOrders.length + 1).padStart(3, '0')}`,
+      orderNumber: order?.orderNumber ?? nextOrderNumber(state.workOrders),
       projectId,
       taskName: taskName.trim(),
       description: description.trim(),
