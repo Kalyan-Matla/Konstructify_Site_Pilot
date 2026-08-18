@@ -49,24 +49,13 @@ npm run preview
 
 ## Deploy
 
-**Vercel (recommended, one click):**
-1. Push this repo to GitHub (see below).
-2. [vercel.com/new](https://vercel.com/new) → import the repo. Framework preset auto-detects as **Vite** from `vercel.json` — accept the defaults (`npm run build`, output `dist`) and deploy.
-3. `vercel.json` already handles SPA rewrites, so deep links (e.g. `/reports`) work on refresh, and long-caches hashed assets.
+**Vercel (recommended):** import the repo once at [vercel.com/new](https://vercel.com/new). The framework preset auto-detects as **Vite** from `vercel.json` — accept the defaults (`npm run build`, output `dist`).
+
+Vercel then watches GitHub directly: `main` deploys to production, and every branch and pull request gets its own preview URL. No deploy token, no repo secret, nothing to rotate. `vercel.json` already handles SPA rewrites, so deep links (e.g. `/reports`) survive a refresh, and hashed assets are long-cached.
 
 **Any static host** (Netlify, Cloudflare Pages, GitHub Pages, S3): run `npm run build`, upload the `dist/` folder. It's a fully static SPA — just make sure your host rewrites all routes to `index.html`.
 
-**GitHub Actions auto-deploy:** `.github/workflows/deploy.yml` deploys to Vercel on every push to `main`, if you add a `VERCEL_TOKEN` repo secret ([vercel.com/account/tokens](https://vercel.com/account/tokens)). Not required if you use Vercel's native Git integration instead (step 2 above) — pick one, not both.
-
-## Push this to GitHub
-
-```bash
-cd konstructify
-git remote add origin https://github.com/<your-username>/<repo-name>.git
-git push -u origin main
-```
-
-The repo already has git history and a clean working tree — this is the only step needed.
+> There is deliberately no GitHub Actions deploy workflow. Under Vercel's Git integration it would be a redundant second deploy path requiring a long-lived `VERCEL_TOKEN` secret in the repo — more to maintain, more to leak, and no preview deploys.
 
 ## Data
 
