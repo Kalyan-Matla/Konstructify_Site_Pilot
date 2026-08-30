@@ -18,6 +18,7 @@ import Budgeting from './pages/Budgeting';
 import Payments from './pages/Payments';
 import Reports from './pages/Reports';
 import Approvals from './pages/Approvals';
+import Drawings from './pages/Drawings';
 
 /** Public entry: a marketing landing page that leads into the login screen. */
 function PublicShell() {
@@ -75,6 +76,7 @@ function Shell() {
             <Route path="/work-orders" element={<Guarded capability="work-orders:view"><WorkOrders /></Guarded>} />
             <Route path="/budgeting" element={<Guarded capability="budgeting:view"><Budgeting /></Guarded>} />
             <Route path="/payments" element={<Guarded capability="payments:view"><Payments /></Guarded>} />
+            <Route path="/drawings" element={<Guarded capability="drawings:view"><Drawings /></Guarded>} />
             <Route path="/approvals" element={<Guarded capability="sop:view"><Approvals /></Guarded>} />
             <Route path="/reports" element={<Guarded capability="reports:view"><Reports /></Guarded>} />
             <Route path="*" element={<Guarded capability="dashboard:view"><Dashboard /></Guarded>} />

@@ -50,6 +50,40 @@ export interface SopStepState {
   updatedByName: string;
 }
 
+export type DrawingDiscipline = 'architectural' | 'structural' | 'mep' | '3d' | 'other';
+
+/**
+ * One issued revision of one sheet.
+ *
+ * Revisions of the same sheet share a `sheetNumber`, and exactly one of them
+ * is `isCurrent`. That single flag is the point of a drawing register:
+ * building to a superseded sheet is one of the most expensive mistakes on a
+ * site, and it happens because someone had an old print. Site personas are
+ * shown the current revision only; the history stays reachable for the
+ * people who need to audit what changed.
+ */
+export interface Drawing {
+  id: string;
+  projectId: string;
+  /** Stable across revisions — every revision of a sheet shares it. */
+  sheetNumber: string;
+  title: string;
+  discipline: DrawingDiscipline;
+  /** 'R0', 'R1', 'A', 'B' — whatever the project's convention is. */
+  revision: string;
+  /** The revision this one replaced. Null on first issue. */
+  supersedesId: string | null;
+  isCurrent: boolean;
+  src: string;
+  mimeType: string;
+  sizeBytes: number;
+  uploadedByUserId: string;
+  uploadedByName: string;
+  timestamp: string;
+  /** What changed in this revision, for the people building to it. */
+  notes: string;
+}
+
 export type DocumentKind = 'permit' | 'noc' | 'sanction' | 'drawing' | 'other';
 
 export interface ProjectDocument {
@@ -212,7 +246,8 @@ export type EntityKind =
   | 'photo'
   | 'zone'
   | 'sopStep'
-  | 'document';
+  | 'document'
+  | 'drawing';
 
 export interface SyncQueueItem {
   id: string;
@@ -235,6 +270,7 @@ export interface AppState {
   zones: Zone[];
   sopSteps: SopStepState[];
   documents: ProjectDocument[];
+  drawings: Drawing[];
   activity: ActivityItem[];
   syncQueue: SyncQueueItem[];
 }

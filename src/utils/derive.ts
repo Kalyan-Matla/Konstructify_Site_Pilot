@@ -155,20 +155,29 @@ export function zoneProgress(zoneId: string, state: AppState): ZoneProgress {
   const children = state.zones.filter((z) => z.parentId === zoneId);
   const ownTasks = state.tasks.filter((t) => t.zoneId === zoneId);
 
-  const parts: Array<{ percent: number; count: number }> = [
-    ...ownTasks.map((t) => ({ percent: t.percentComplete, count: 1 })),
+  const parts = [
+    ...ownTasks.map((t) => ({ percent: t.percentComplete, tasks: 1, weight: 1 })),
     ...children.map((c) => {
       const p = zoneProgress(c.id, state);
-      return { percent: p.percentComplete, count: p.taskCount };
+      // A child with no tasks yet still counts, at weight 1. Excluding it
+      // produced a room reading 100% while a beam drawn inside it read 0% —
+      // which anyone on site would call a bug, and rightly. A zone someone
+      // took the trouble to mark is part of the work whether or not it has
+      // been planned yet.
+      return { percent: p.percentComplete, tasks: p.taskCount, weight: Math.max(p.taskCount, 1) };
     }),
-  ].filter((p) => p.count > 0);
+  ];
 
-  const taskCount = parts.reduce((s, p) => s + p.count, 0);
+  // Reported separately from the weighting: this is real tasks in the
+  // subtree, and it is what distinguishes "nothing planned here" from
+  // "planned and not started".
+  const taskCount = parts.reduce((s, p) => s + p.tasks, 0);
   if (taskCount === 0) return { percentComplete: 0, status: 'not-started', taskCount: 0 };
 
-  // Weight each contribution by how many tasks sit under it, so a room with
-  // ten elements is not outvoted by a sibling with one.
-  const percent = parts.reduce((s, p) => s + p.percent * p.count, 0) / taskCount;
+  // Weight by how much work sits under each contribution, so a room with ten
+  // elements is not outvoted by a sibling with one.
+  const totalWeight = parts.reduce((s, p) => s + p.weight, 0);
+  const percent = parts.reduce((s, p) => s + p.percent * p.weight, 0) / totalWeight;
   const status: ZoneStatus = percent >= 100 ? 'complete' : percent > 0 ? 'in-progress' : 'not-started';
   return { percentComplete: percent, status, taskCount };
 }

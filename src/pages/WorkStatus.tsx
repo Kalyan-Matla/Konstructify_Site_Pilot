@@ -283,6 +283,8 @@ function TaskForm({
   const [phase, setPhase] = useState(task?.phase ?? 'Foundation');
   const [projectId, setProjectId] = useState(task?.projectId ?? projects[0]?.id ?? '');
   const [dueDate, setDueDate] = useState(task?.dueDate ?? isoDaysFromNow(14));
+  const [zoneId, setZoneId] = useState(task?.zoneId ?? '');
+  const [budgetItemId, setBudgetItemId] = useState(task?.budgetItemId ?? '');
   const [error, setError] = useState('');
 
   const submit = (e: FormEvent) => {
@@ -298,8 +300,8 @@ function TaskForm({
       status: task?.status ?? 'pending',
       dueDate,
       percentComplete: task?.percentComplete ?? 0,
-      budgetItemId: task?.budgetItemId ?? null,
-      zoneId: task?.zoneId ?? null,
+      budgetItemId: budgetItemId || null,
+      zoneId: zoneId || null,
       createdAt: task?.createdAt ?? todayISO(),
     });
   };
@@ -334,6 +336,22 @@ function TaskForm({
           </Field>
           <Field label="Due date" htmlFor="tk-due">
             <input id="tk-due" type="date" className={inputCls} value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+          </Field>
+          <Field label="BOQ line" htmlFor="tk-boq">
+            <select id="tk-boq" className={inputCls} value={budgetItemId} onChange={(e) => setBudgetItemId(e.target.value)}>
+              <option value="">Not linked — excluded from weighted progress</option>
+              {state.budgetItems.filter((b) => b.projectId === projectId).map((b) => (
+                <option key={b.id} value={b.id}>{b.description}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Zone" htmlFor="tk-zone">
+            <select id="tk-zone" className={inputCls} value={zoneId} onChange={(e) => setZoneId(e.target.value)}>
+              <option value="">Not mapped to a zone</option>
+              {state.zones.filter((z) => z.projectId === projectId).map((z) => (
+                <option key={z.id} value={z.id}>{z.name}</option>
+              ))}
+            </select>
           </Field>
         </div>
         <div className="mt-4 flex justify-end gap-2">

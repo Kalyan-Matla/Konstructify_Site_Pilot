@@ -3,6 +3,7 @@ import {
   BarChart3,
   ClipboardList,
   FileCheck,
+  Ruler,
   CreditCard,
   FolderOpen,
   HardHat,
@@ -41,6 +42,7 @@ export const NAV = [
   { name: 'Work Orders', path: '/work-orders', icon: ClipboardList, capability: 'work-orders:view' },
   { name: 'Budgeting', path: '/budgeting', icon: IndianRupee, capability: 'budgeting:view' },
   { name: 'Payments', path: '/payments', icon: CreditCard, capability: 'payments:view' },
+  { name: 'Drawings', path: '/drawings', icon: Ruler, capability: 'drawings:view' },
   { name: 'Approvals', path: '/approvals', icon: FileCheck, capability: 'sop:view' },
   { name: 'Reports', path: '/reports', icon: BarChart3, capability: 'reports:view' },
 ] as const satisfies ReadonlyArray<{

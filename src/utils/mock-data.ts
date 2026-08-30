@@ -181,10 +181,10 @@ export function buildMockState(): AppState {
     zones: [
       { id: 'z-p1-gf', projectId: 'p1', parentId: null, level: 'floor', name: 'Ground Floor', drawingId: null, outline: null },
       { id: 'z-p1-ff', projectId: 'p1', parentId: null, level: 'floor', name: 'First Floor', drawingId: null, outline: null },
-      { id: 'z-p1-gf-liv', projectId: 'p1', parentId: 'z-p1-gf', level: 'room', name: 'Living Room', drawingId: null, outline: null },
-      { id: 'z-p1-gf-kit', projectId: 'p1', parentId: 'z-p1-gf', level: 'room', name: 'Kitchen', drawingId: null, outline: null },
-      { id: 'z-p1-gf-c4', projectId: 'p1', parentId: 'z-p1-gf-liv', level: 'element', name: 'Column C4', drawingId: null, outline: null },
-      { id: 'z-p1-gf-b2', projectId: 'p1', parentId: 'z-p1-gf-liv', level: 'element', name: 'Beam B2', drawingId: null, outline: null },
+      { id: 'z-p1-gf-liv', projectId: 'p1', parentId: 'z-p1-gf', level: 'room', name: 'Living Room', drawingId: 'dwg-a101-r1', outline: [{ x: 0.10, y: 0.13 }, { x: 0.48, y: 0.13 }, { x: 0.48, y: 0.54 }, { x: 0.10, y: 0.54 }] },
+      { id: 'z-p1-gf-kit', projectId: 'p1', parentId: 'z-p1-gf', level: 'room', name: 'Kitchen', drawingId: 'dwg-a101-r1', outline: [{ x: 0.10, y: 0.54 }, { x: 0.48, y: 0.54 }, { x: 0.48, y: 0.87 }, { x: 0.10, y: 0.87 }] },
+      { id: 'z-p1-gf-c4', projectId: 'p1', parentId: 'z-p1-gf-liv', level: 'element', name: 'Column C4', drawingId: 'dwg-a101-r1', outline: [{ x: 0.15, y: 0.20 }, { x: 0.21, y: 0.20 }, { x: 0.21, y: 0.29 }, { x: 0.15, y: 0.29 }] },
+      { id: 'z-p1-gf-b2', projectId: 'p1', parentId: 'z-p1-gf-liv', level: 'element', name: 'Beam B2', drawingId: 'dwg-a101-r1', outline: [{ x: 0.30, y: 0.20 }, { x: 0.44, y: 0.20 }, { x: 0.44, y: 0.25 }, { x: 0.30, y: 0.25 }] },
       { id: 'z-p2-b1', projectId: 'p2', parentId: null, level: 'floor', name: 'Basement B1', drawingId: null, outline: null },
       { id: 'z-p2-b1-park', projectId: 'p2', parentId: 'z-p2-b1', level: 'room', name: 'Parking Bay', drawingId: null, outline: null },
     ],
@@ -193,6 +193,45 @@ export function buildMockState(): AppState {
     photos: [],
     // Checklist state and documents start empty — they are filled by the
     // project team as approvals are actually obtained.
+    // A seeded ground-floor plan so the zone overlay lands on a real sheet.
+    // Authored as SVG rather than shipped as a binary — it stays small, and
+    // it renders identically wherever the demo runs.
+    drawings: [
+      {
+        id: 'dwg-a101-r1',
+        projectId: 'p1',
+        sheetNumber: 'A-101',
+        title: 'Ground floor plan',
+        discipline: 'architectural',
+        revision: 'R1',
+        supersedesId: 'dwg-a101-r0',
+        isCurrent: true,
+        src: 'data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%201000%20700%22%20width%3D%221000%22%20height%3D%22700%22%3E%3Crect%20width%3D%221000%22%20height%3D%22700%22%20fill%3D%22%23FCFBF8%22/%3E%3Cg%20stroke%3D%22%23C9C2B5%22%20stroke-width%3D%221%22%3E%3Cpath%20d%3D%22M0%2050H1000M0%20150H1000M0%20250H1000M0%20350H1000M0%20450H1000M0%20550H1000M0%20650H1000%22/%3E%3Cpath%20d%3D%22M50%200V700M150%200V700M250%200V700M350%200V700M450%200V700M550%200V700M650%200V700M750%200V700M850%200V700M950%200V700%22/%3E%3C/g%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%231C1917%22%20stroke-width%3D%228%22%3E%3Crect%20x%3D%22100%22%20y%3D%2290%22%20width%3D%22800%22%20height%3D%22520%22/%3E%3Cpath%20d%3D%22M480%2090V610%22/%3E%3Cpath%20d%3D%22M100%20380H480%22/%3E%3Cpath%20d%3D%22M480%20300H900%22/%3E%3C/g%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%231C1917%22%20stroke-width%3D%224%22%3E%3Crect%20x%3D%22150%22%20y%3D%22140%22%20width%3D%2260%22%20height%3D%2260%22/%3E%3Crect%20x%3D%22790%22%20y%3D%22140%22%20width%3D%2260%22%20height%3D%2260%22/%3E%3Crect%20x%3D%22150%22%20y%3D%22500%22%20width%3D%2260%22%20height%3D%2260%22/%3E%3C/g%3E%3Cg%20font-family%3D%22monospace%22%20font-size%3D%2222%22%20fill%3D%22%2357534E%22%3E%3Ctext%20x%3D%22230%22%20y%3D%22240%22%3ELIVING%3C/text%3E%3Ctext%20x%3D%22230%22%20y%3D%22500%22%3EKITCHEN%3C/text%3E%3Ctext%20x%3D%22620%22%20y%3D%22200%22%3EBEDROOM%201%3C/text%3E%3Ctext%20x%3D%22620%22%20y%3D%22470%22%3EBEDROOM%202%3C/text%3E%3C/g%3E%3Cg%20font-family%3D%22monospace%22%20font-size%3D%2218%22%20fill%3D%22%23A8741A%22%3E%3Ctext%20x%3D%22120%22%20y%3D%22660%22%3EGROUND%20FLOOR%20PLAN%3C/text%3E%3Ctext%20x%3D%22700%22%20y%3D%22660%22%3ESHEET%20A-101%20/%20R1%3C/text%3E%3C/g%3E%3C/svg%3E',
+        mimeType: 'image/svg+xml',
+        sizeBytes: 2400,
+        uploadedByUserId: 'u-1-pm',
+        uploadedByName: 'Anita Deshmukh',
+        timestamp: isoDaysFromNow(-8),
+        notes: 'Kitchen window relocated; column C4 grid reference corrected.',
+      },
+      {
+        id: 'dwg-a101-r0',
+        projectId: 'p1',
+        sheetNumber: 'A-101',
+        title: 'Ground floor plan',
+        discipline: 'architectural',
+        revision: 'R0',
+        supersedesId: null,
+        isCurrent: false,
+        src: 'data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%201000%20700%22%20width%3D%221000%22%20height%3D%22700%22%3E%3Crect%20width%3D%221000%22%20height%3D%22700%22%20fill%3D%22%23FCFBF8%22/%3E%3Cg%20stroke%3D%22%23C9C2B5%22%20stroke-width%3D%221%22%3E%3Cpath%20d%3D%22M0%2050H1000M0%20150H1000M0%20250H1000M0%20350H1000M0%20450H1000M0%20550H1000M0%20650H1000%22/%3E%3Cpath%20d%3D%22M50%200V700M150%200V700M250%200V700M350%200V700M450%200V700M550%200V700M650%200V700M750%200V700M850%200V700M950%200V700%22/%3E%3C/g%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%231C1917%22%20stroke-width%3D%228%22%3E%3Crect%20x%3D%22100%22%20y%3D%2290%22%20width%3D%22800%22%20height%3D%22520%22/%3E%3Cpath%20d%3D%22M480%2090V610%22/%3E%3Cpath%20d%3D%22M100%20380H480%22/%3E%3Cpath%20d%3D%22M480%20300H900%22/%3E%3C/g%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%231C1917%22%20stroke-width%3D%224%22%3E%3Crect%20x%3D%22150%22%20y%3D%22140%22%20width%3D%2260%22%20height%3D%2260%22/%3E%3Crect%20x%3D%22790%22%20y%3D%22140%22%20width%3D%2260%22%20height%3D%2260%22/%3E%3Crect%20x%3D%22150%22%20y%3D%22500%22%20width%3D%2260%22%20height%3D%2260%22/%3E%3C/g%3E%3Cg%20font-family%3D%22monospace%22%20font-size%3D%2222%22%20fill%3D%22%2357534E%22%3E%3Ctext%20x%3D%22230%22%20y%3D%22240%22%3ELIVING%3C/text%3E%3Ctext%20x%3D%22230%22%20y%3D%22500%22%3EKITCHEN%3C/text%3E%3Ctext%20x%3D%22620%22%20y%3D%22200%22%3EBEDROOM%201%3C/text%3E%3Ctext%20x%3D%22620%22%20y%3D%22470%22%3EBEDROOM%202%3C/text%3E%3C/g%3E%3Cg%20font-family%3D%22monospace%22%20font-size%3D%2218%22%20fill%3D%22%23A8741A%22%3E%3Ctext%20x%3D%22120%22%20y%3D%22660%22%3EGROUND%20FLOOR%20PLAN%3C/text%3E%3Ctext%20x%3D%22700%22%20y%3D%22660%22%3ESHEET%20A-101%20/%20R1%3C/text%3E%3C/g%3E%3C/svg%3E',
+        mimeType: 'image/svg+xml',
+        sizeBytes: 2400,
+        uploadedByUserId: 'u-1-pm',
+        uploadedByName: 'Anita Deshmukh',
+        timestamp: isoDaysFromNow(-26),
+        notes: 'First issue for construction.',
+      },
+    ],
     sopSteps: [],
     documents: [],
     activity: [
