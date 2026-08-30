@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import type { AppState } from '../types';
 import { buildMockState } from './mock-data';
 import { zoneProgress, ZONE_STATUS_COLOR } from './derive';
+import { formatFeetInches, formatZoneMeasurement, measureZone } from './drawings';
 
 describe('drawing register — one current revision per sheet', () => {
   const state = buildMockState();
@@ -188,5 +189,80 @@ describe('a marked zone counts even before it has tasks', () => {
     expect(r.taskCount).toBe(0);
     expect(r.percentComplete).toBe(0);
     expect(r.status).toBe('not-started');
+  });
+});
+
+describe('zone measurements in feet and inches', () => {
+  const state = buildMockState();
+  const sheet = state.drawings.find((d) => d.isCurrent)!;
+
+  test('the seeded sheet carries a real-world scale', () => {
+    expect(sheet.sheetWidthMm).toBe(21336);   // 840 in
+    expect(sheet.sheetHeightMm).toBe(17069);  // 672 in
+  });
+
+  /** The plan is laid out on a foot grid, so every derived figure should be
+   *  a round number. If the outline fractions and the drawing ever drift
+   *  apart, this catches it — the panel would stop matching the dimension
+   *  string printed on the sheet, which is how people stop trusting it. */
+  test('the living room matches its dimension string exactly', () => {
+    const m = measureZone(state.zones.find((z) => z.name === 'Living Room')!, sheet)!;
+    expect(m.widthLabel).toBe(`25'-0"`);
+    expect(m.heightLabel).toBe(`19'-0"`);
+    expect(m.areaSqft).toBe(475);
+  });
+
+  test('the kitchen does too', () => {
+    const m = measureZone(state.zones.find((z) => z.name === 'Kitchen')!, sheet)!;
+    expect(m.widthLabel).toBe(`25'-0"`);
+    expect(m.heightLabel).toBe(`15'-0"`);
+    expect(m.areaSqft).toBe(375);
+  });
+
+  test('a column reads at element scale, not room scale', () => {
+    const m = measureZone(state.zones.find((z) => z.name === 'Column C4')!, sheet)!;
+    expect(m.widthLabel).toBe(`2'-0"`);
+    expect(m.heightLabel).toBe(`2'-0"`);
+  });
+
+  test('a beam reads as a long thin member', () => {
+    const m = measureZone(state.zones.find((z) => z.name === 'Beam B2')!, sheet)!;
+    expect(m.widthLabel).toBe(`9'-0"`);
+    expect(m.heightLabel).toBe(`1'-0"`);
+  });
+
+  test('inches are carried, not swallowed into feet', () => {
+    expect(formatFeetInches(304.8)).toBe(`1'-0"`);
+    expect(formatFeetInches(304.8 + 25.4 * 9)).toBe(`1'-9"`);
+    expect(formatFeetInches(25.4 * 11)).toBe(`0'-11"`);
+    // 11.6 inches rounds up to a foot rather than reading 0'-12".
+    expect(formatFeetInches(25.4 * 11.6)).toBe(`1'-0"`);
+  });
+
+  /** Refusing is the feature. A fabricated measurement on a construction
+   *  drawing reads as authoritative and gets material ordered against it. */
+  test('an unscaled sheet yields no measurement rather than a guess', () => {
+    const unscaled = { ...sheet, sheetWidthMm: null, sheetHeightMm: null };
+    expect(measureZone(state.zones.find((z) => z.name === 'Living Room')!, unscaled)).toBeNull();
+    expect(formatZoneMeasurement(null)).toBeNull();
+  });
+
+  test('a zone with no outline yields no measurement', () => {
+    expect(measureZone(state.zones.find((z) => z.outline === null)!, sheet)).toBeNull();
+  });
+
+  test('the formatted string carries dimensions and area in sq ft', () => {
+    const s = formatZoneMeasurement(
+      measureZone(state.zones.find((z) => z.name === 'Living Room')!, sheet),
+    )!;
+    expect(s).toBe(`25'-0" × 19'-0" · 475 sq ft`);
+  });
+
+  test('the four rooms sum to the building footprint', () => {
+    const rooms = ['Living Room', 'Kitchen'].map(
+      (n) => measureZone(state.zones.find((z) => z.name === n)!, sheet)!.areaSqft,
+    );
+    // Living + Kitchen is the left half: 25' x 34' = 850 sq ft.
+    expect(rooms.reduce((a, b) => a + b, 0)).toBe(850);
   });
 });

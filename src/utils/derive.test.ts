@@ -152,3 +152,58 @@ describe('zoneProgress — rolls up floor → room → element', () => {
     }
   });
 });
+
+describe('updating a room updates the sheet', () => {
+  /** The property behind clicking a room to change its status: you edit the
+   *  work, and the colour follows. If a control ever set colour directly,
+   *  the drawing could disagree with the site — which is the one failure
+   *  this whole feature exists to prevent. */
+  function house(): AppState {
+    const s = base();
+    s.projects = [project('p')];
+    s.zones = [
+      { id: 'gf', projectId: 'p', parentId: null, level: 'floor', name: 'GF', drawingId: null, outline: null },
+      { id: 'liv', projectId: 'p', parentId: 'gf', level: 'room', name: 'Living', drawingId: null, outline: null },
+      { id: 'col', projectId: 'p', parentId: 'liv', level: 'element', name: 'C4', drawingId: null, outline: null },
+      { id: 'beam', projectId: 'p', parentId: 'liv', level: 'element', name: 'B2', drawingId: null, outline: null },
+    ];
+    s.tasks = [
+      task('t1', 'p', 0, null, 'col'),
+      task('t2', 'p', 0, null, 'beam'),
+    ];
+    return s;
+  }
+
+  test('a room starts grey and its floor with it', () => {
+    const s = house();
+    expect(zoneProgress('liv', s).status).toBe('not-started');
+    expect(zoneProgress('gf', s).status).toBe('not-started');
+  });
+
+  test('completing one element turns the room amber, not green', () => {
+    const s = house();
+    s.tasks[0].percentComplete = 100;
+    const liv = zoneProgress('liv', s);
+    expect(liv.percentComplete).toBe(50);
+    expect(liv.status).toBe('in-progress');
+  });
+
+  test('completing every element turns the room green', () => {
+    const s = house();
+    s.tasks.forEach((t) => (t.percentComplete = 100));
+    expect(zoneProgress('liv', s).status).toBe('complete');
+  });
+
+  test('the change propagates all the way up to the floor', () => {
+    const s = house();
+    s.tasks.forEach((t) => (t.percentComplete = 100));
+    expect(zoneProgress('gf', s).status).toBe('complete');
+  });
+
+  test('a half-done task moves the room without completing it', () => {
+    const s = house();
+    s.tasks[0].percentComplete = 50;
+    expect(zoneProgress('liv', s).percentComplete).toBe(25);
+    expect(zoneProgress('liv', s).status).toBe('in-progress');
+  });
+});

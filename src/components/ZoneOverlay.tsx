@@ -3,6 +3,7 @@ import clsx from 'clsx';
 import type { Drawing, Zone, ZoneLevel } from '../types';
 import { useApp } from '../contexts/AppContext';
 import { zoneProgress, ZONE_STATUS_COLOR, type ZoneStatus } from '../utils/derive';
+import { formatZoneMeasurement, measureZone } from '../utils/drawings';
 
 interface Props {
   drawing: Drawing;
@@ -42,7 +43,11 @@ export default function ZoneOverlay({
     () =>
       zones
         .filter((z) => z.drawingId === drawing.id && z.outline && z.outline.length >= 3)
-        .map((z) => ({ zone: z, progress: zoneProgress(z.id, state) })),
+        .map((z) => ({
+          zone: z,
+          progress: zoneProgress(z.id, state),
+          measure: formatZoneMeasurement(measureZone(z, drawing)),
+        })),
     [zones, drawing.id, state],
   );
 
@@ -124,7 +129,7 @@ export default function ZoneOverlay({
         role="img"
         aria-label={`Work status overlay: ${painted.length} zones coloured by completion`}
       >
-        {painted.map(({ zone, progress }) => {
+        {painted.map(({ zone, progress, measure }) => {
           const pts = zone.outline!.map((p) => `${p.x * 100},${p.y * 100}`).join(' ');
           const colour = ZONE_STATUS_COLOR[progress.status as ZoneStatus];
           const selected = zone.id === selectedZoneId;
@@ -137,14 +142,31 @@ export default function ZoneOverlay({
               stroke={colour}
               strokeWidth={selected ? 0.6 : 0.3}
               vectorEffect="non-scaling-stroke"
-              className="cursor-pointer transition-[fill-opacity] duration-200"
+              // An SVG shape is not focusable or operable by default, so it
+              // needs the role, the tab stop and the key handler spelled out
+              // — otherwise the drawing is mouse-only.
+              role="button"
+              tabIndex={drawing_mode ? -1 : 0}
+              aria-pressed={selected}
+              aria-label={`${zone.name}, ${progress.percentComplete.toFixed(0)} percent complete${measure ? `, ${measure}` : ''}`}
+              className="cursor-pointer transition-[fill-opacity] duration-200 focus-visible:outline-none"
+              style={selected ? undefined : { outline: 'none' }}
               onClick={(e) => {
                 e.stopPropagation();
                 if (!drawing_mode) onSelect(selected ? null : zone.id);
               }}
+              onKeyDown={(e) => {
+                if (drawing_mode) return;
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onSelect(selected ? null : zone.id);
+                }
+              }}
             >
               <title>
                 {zone.name} — {progress.percentComplete.toFixed(0)}% ({progress.status})
+                {measure ? ` · ${measure}` : ''}
               </title>
             </polygon>
           );

@@ -6,7 +6,9 @@ import { useApp } from '../contexts/AppContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Badge, EmptyState, Field, Modal, PageHeader, inputCls } from '../components/ui';
 import ZoneOverlay, { ZONE_LEVEL_LABEL } from '../components/ZoneOverlay';
+import ZoneDetail from '../components/ZoneDetail';
 import { zoneProgress, ZONE_STATUS_COLOR, type ZoneStatus } from '../utils/derive';
+import { formatZoneMeasurement, measureZone } from '../utils/drawings';
 import { formatDate, uid } from '../utils/format';
 import { approxBytesOf, formatBytes } from '../utils/photos';
 
@@ -49,7 +51,6 @@ export default function Drawings() {
   const [uploadOpen, setUploadOpen] = useState(false);
 
   const selectedZone = zones.find((z) => z.id === selectedZoneId) ?? null;
-  const selectedTasks = state.tasks.filter((t) => t.zoneId === selectedZoneId);
 
   const commitZone = (outline: Array<{ x: number; y: number }>) => {
     if (!drawingZone || !sheet) return;
@@ -206,24 +207,12 @@ export default function Drawings() {
             )}
 
             {selectedZone && (
-              <div className="panel mt-3 p-4">
-                <h3 className="text-sm font-bold text-ink">{selectedZone.name}</h3>
-                <p className="text-xs text-ink/50">{ZONE_LEVEL_LABEL[selectedZone.level]}</p>
-                {selectedTasks.length === 0 ? (
-                  <p className="mt-2 text-xs text-ink/55">
-                    No tasks mapped to this zone yet — its colour comes from whatever sits beneath it.
-                  </p>
-                ) : (
-                  <ul className="mt-2 space-y-1.5 text-sm">
-                    {selectedTasks.map((t) => (
-                      <li key={t.id} className="flex items-center justify-between gap-2">
-                        <span className="min-w-0 truncate text-ink/80">{t.name}</span>
-                        <span className="num shrink-0 text-xs font-bold text-ink">{t.percentComplete}%</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
+              <ZoneDetail
+                zone={selectedZone}
+                zones={zones}
+                drawing={sheet ?? null}
+                onClose={() => setSelectedZoneId(null)}
+              />
             )}
           </div>
         </div>
@@ -275,6 +264,13 @@ function ZoneTree({
 }) {
   const { state } = useApp();
 
+  /** Real size from the outline and the sheet's scale — null on an
+   *  unscaled sheet, where a figure would be invention. */
+  const measurementFor = (z: Zone): string | null => {
+    const sheet = z.drawingId ? state.drawings.find((d) => d.id === z.drawingId) : null;
+    return sheet ? formatZoneMeasurement(measureZone(z, sheet)) : null;
+  };
+
   const render = (parentId: string | null, depth: number): JSX.Element[] =>
     zones
       .filter((z) => z.parentId === parentId)
@@ -299,8 +295,12 @@ function ZoneTree({
               />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-semibold text-ink">{z.name}</span>
-                <span className="text-[10px] font-bold uppercase tracking-wide text-ink/40">
-                  {ZONE_LEVEL_LABEL[z.level]}
+                <span className="num text-[10px] font-bold text-ink/40">
+                  {/* Only the level label is uppercased. SI symbols are
+                      case-sensitive — `MM` is megametres, and `M²` is not a
+                      unit at all. Not pedantry on a construction drawing. */}
+                  <span className="uppercase tracking-wide">{ZONE_LEVEL_LABEL[z.level]}</span>
+                  {measurementFor(z) && <span> · {measurementFor(z)}</span>}
                 </span>
               </span>
               <span className="num shrink-0 text-xs font-bold text-ink/70">
@@ -494,6 +494,11 @@ function IssueDrawingForm({
         uploadedByName: userName,
         timestamp: new Date().toISOString(),
         notes: notes.trim(),
+        // Unknown until someone states the scale. Left null rather than
+        // guessed, so measureZone() withholds figures instead of inventing
+        // them for a sheet nobody has calibrated.
+        sheetWidthMm: null,
+        sheetHeightMm: null,
       };
       upsert('drawing', drawing, `${drawing.sheetNumber} ${drawing.revision} issued`);
       onClose();

@@ -82,6 +82,20 @@ export interface Drawing {
   timestamp: string;
   /** What changed in this revision, for the people building to it. */
   notes: string;
+  /**
+   * Real-world extent of the sheet, in millimetres.
+   *
+   * Zone outlines are stored as fractions of the sheet, which keeps them
+   * correct when a drawing is re-exported at another resolution — but a
+   * fraction alone cannot answer "how big is this room". With the sheet's
+   * true width and height, every zone yields a real measurement instead of
+   * a percentage, which is what anyone on site actually needs.
+   *
+   * Null when the sheet has no stated scale; measurements are then withheld
+   * rather than invented.
+   */
+  sheetWidthMm: number | null;
+  sheetHeightMm: number | null;
 }
 
 export type DocumentKind = 'permit' | 'noc' | 'sanction' | 'drawing' | 'other';
@@ -175,8 +189,17 @@ export interface Zone {
   name: string;
   /** The drawing this zone is outlined on, once drawings exist (Block D). */
   drawingId: string | null;
-  /** Outline as fractions of the drawing's width/height, so it survives the
-   *  image being resized or re-exported at another resolution. */
+  /**
+   * Outline as fractions of the drawing's width and height, so it survives
+   * the image being resized or re-exported at another resolution.
+   *
+   * Keep the precision high. These fractions are multiplied by the sheet's
+   * real width to produce the measurement shown on site: at four decimal
+   * places a 24 m sheet resolves to 2.4 mm, which was enough to print a
+   * room as 7601 mm when the drawing itself is dimensioned 7600. A figure
+   * that disagrees with the sheet by a millimetre is how people stop
+   * trusting the overlay.
+   */
   outline: Array<{ x: number; y: number }> | null;
 }
 
