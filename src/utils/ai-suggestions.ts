@@ -61,8 +61,7 @@ export function suggestPayment(invoices: Invoice[], vendors: Vendor[]): AISugges
 }
 
 /** Rule: photo count drives a mock completion estimate and delay prediction. */
-export function suggestWorkStatus(task: WorkTask): AISuggestion | null {
-  const photoCount = task.photos.length;
+export function suggestWorkStatus(task: WorkTask, photoCount: number): AISuggestion | null {
   if (photoCount === 0 || task.status === 'complete') return null;
   const estimatedPercent = Math.min(photoCount * 10, 90);
   const daysUsed = Math.max(daysSince(task.createdAt), 1);

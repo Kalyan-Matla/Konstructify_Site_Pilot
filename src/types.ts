@@ -48,11 +48,45 @@ export interface Invoice {
   notes: string;
 }
 
-export interface TaskPhoto {
+/**
+ * One photo entity for the whole project.
+ *
+ * A photo taken against a task is still a project photo — it just carries a
+ * taskId. Modelling these separately would produce two disconnected
+ * galleries of the same site, and the site photo that matters most is
+ * usually the one someone took against a specific task.
+ */
+export interface ProjectPhoto {
   id: string;
+  projectId: string;
+  /** Set when the photo was captured against a task. */
+  taskId: string | null;
+  /** Set when the photo documents a specific zone (a room, a column). */
+  zoneId: string | null;
   dataUrl: string;
   caption: string;
+  /** Who added it — a client's photo of a defect must stay attributable. */
+  uploadedByUserId: string;
+  uploadedByName: string;
   timestamp: string; // ISO
+}
+
+/** Floor contains rooms; rooms contain elements. Status rolls UP this chain,
+ *  so a drawing can never disagree with the tasks underneath it. */
+export type ZoneLevel = 'floor' | 'room' | 'element';
+
+export interface Zone {
+  id: string;
+  projectId: string;
+  /** null at floor level. */
+  parentId: string | null;
+  level: ZoneLevel;
+  name: string;
+  /** The drawing this zone is outlined on, once drawings exist (Block D). */
+  drawingId: string | null;
+  /** Outline as fractions of the drawing's width/height, so it survives the
+   *  image being resized or re-exported at another resolution. */
+  outline: Array<{ x: number; y: number }> | null;
 }
 
 export type TaskStatus = 'pending' | 'in-progress' | 'complete';
@@ -68,7 +102,12 @@ export interface WorkTask {
   status: TaskStatus;
   dueDate: string; // ISO date
   percentComplete: number;
-  photos: TaskPhoto[];
+  /** The BOQ line this task delivers. Progress is weighted by BOQ value, so
+   *  a task with no line cannot contribute to the percentage — it is
+   *  excluded and counted, never silently averaged in. */
+  budgetItemId: string | null;
+  /** The zone this task builds, if it maps to one. */
+  zoneId: string | null;
   createdAt: string; // ISO date
 }
 
@@ -112,7 +151,9 @@ export type EntityKind =
   | 'invoice'
   | 'task'
   | 'workOrder'
-  | 'budgetItem';
+  | 'budgetItem'
+  | 'photo'
+  | 'zone';
 
 export interface SyncQueueItem {
   id: string;
@@ -131,6 +172,8 @@ export interface AppState {
   tasks: WorkTask[];
   workOrders: WorkOrder[];
   budgetItems: BudgetItem[];
+  photos: ProjectPhoto[];
+  zones: Zone[];
   activity: ActivityItem[];
   syncQueue: SyncQueueItem[];
 }

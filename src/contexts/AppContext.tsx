@@ -16,10 +16,12 @@ import type {
   EntityKind,
   Invoice,
   Project,
+  ProjectPhoto,
   SyncQueueItem,
   Vendor,
   WorkOrder,
   WorkTask,
+  Zone,
 } from '../types';
 import { buildMockState } from '../utils/mock-data';
 import { uid } from '../utils/format';
@@ -31,7 +33,8 @@ import { useToast } from './ToastContext';
 // and reseeds, which is correct for mock data and non-negotiable for real.
 const STORAGE_KEY = 'konstructify-state-v2';
 
-export type Entity = Project | Vendor | Invoice | WorkTask | WorkOrder | BudgetItem;
+export type Entity =
+  | Project | Vendor | Invoice | WorkTask | WorkOrder | BudgetItem | ProjectPhoto | Zone;
 
 const collectionOf: Record<EntityKind, keyof AppState> = {
   project: 'projects',
@@ -40,6 +43,8 @@ const collectionOf: Record<EntityKind, keyof AppState> = {
   task: 'tasks',
   workOrder: 'workOrders',
   budgetItem: 'budgetItems',
+  photo: 'photos',
+  zone: 'zones',
 };
 
 type Action =

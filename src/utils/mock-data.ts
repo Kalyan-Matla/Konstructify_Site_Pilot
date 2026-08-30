@@ -123,18 +123,18 @@ export function buildMockState(): AppState {
       inv('i30', 'v6', 'p2', 'PQR-49', 70_000, 47, -33, 'paid', 'Scaffolding rental', 'NEFT', -5),
     ],
     tasks: [
-      { id: 't1', projectId: 'p1', name: 'Foundation excavation', description: 'Excavate and level foundation to -2.4m', phase: 'Foundation', assignedTo: 'Site Lead', status: 'complete', dueDate: isoDaysFromNow(-5), percentComplete: 100, photos: [], createdAt: isoDaysFromNow(-28) },
-      { id: 't2', projectId: 'p1', name: 'RMC pour — raft', description: 'M30 raft pour with pump', phase: 'Foundation', assignedTo: 'Concrete Crew', status: 'complete', dueDate: isoDaysFromNow(-12), percentComplete: 100, photos: [], createdAt: isoDaysFromNow(-25) },
-      { id: 't3', projectId: 'p1', name: 'Column framing — GF', description: 'Shuttering and rebar for ground floor columns', phase: 'Structure', assignedTo: 'Shuttering Crew', status: 'in-progress', dueDate: isoDaysFromNow(10), percentComplete: 30, photos: [], createdAt: isoDaysFromNow(-10) },
-      { id: 't4', projectId: 'p1', name: 'Slab casting — GF', description: 'Ground floor slab, 180mm', phase: 'Structure', assignedTo: 'Concrete Crew', status: 'pending', dueDate: isoDaysFromNow(18), percentComplete: 0, photos: [], createdAt: isoDaysFromNow(-5) },
-      { id: 't5', projectId: 'p1', name: 'Brickwork — GF partitions', description: 'AAC block partitions ground floor', phase: 'Structure', assignedTo: 'Mason Gang', status: 'pending', dueDate: isoDaysFromNow(26), percentComplete: 0, photos: [], createdAt: isoDaysFromNow(-3) },
-      { id: 't6', projectId: 'p2', name: 'Site mobilization', description: 'Fencing, site office, water and power', phase: 'Foundation', assignedTo: 'Site Lead', status: 'complete', dueDate: isoDaysFromNow(-14), percentComplete: 100, photos: [], createdAt: isoDaysFromNow(-20) },
-      { id: 't7', projectId: 'p2', name: 'Excavation — basement', description: 'Basement dig with shoring', phase: 'Foundation', assignedTo: 'Excavation Crew', status: 'in-progress', dueDate: isoDaysFromNow(-2), percentComplete: 80, photos: [], createdAt: isoDaysFromNow(-16) },
-      { id: 't8', projectId: 'p2', name: 'MEP rough-in — B1', description: 'Electrical conduits and plumbing sleeves', phase: 'MEP', assignedTo: 'GHI Electrical', status: 'in-progress', dueDate: isoDaysFromNow(15), percentComplete: 40, photos: [], createdAt: isoDaysFromNow(-8) },
-      { id: 't9', projectId: 'p2', name: 'Waterproofing — retaining walls', description: 'Membrane waterproofing on retaining walls', phase: 'Structure', assignedTo: 'Waterproofing Sub', status: 'pending', dueDate: isoDaysFromNow(22), percentComplete: 0, photos: [], createdAt: isoDaysFromNow(-4) },
-      { id: 't10', projectId: 'p3', name: 'Demolition survey', description: 'Survey and mark walls for demolition', phase: 'Foundation', assignedTo: 'Site Lead', status: 'pending', dueDate: isoDaysFromNow(14), percentComplete: 0, photos: [], createdAt: isoDaysFromNow(-2) },
-      { id: 't11', projectId: 'p1', name: 'External plumbing lines', description: 'Sewer connection and storm drains', phase: 'MEP', assignedTo: 'JKL Plumbing', status: 'in-progress', dueDate: isoDaysFromNow(8), percentComplete: 55, photos: [], createdAt: isoDaysFromNow(-12) },
-      { id: 't12', projectId: 'p1', name: 'Sample flat finishing', description: 'One-bedroom sample unit full finish', phase: 'Finishing', assignedTo: 'STU Finishing', status: 'in-progress', dueDate: isoDaysFromNow(20), percentComplete: 25, photos: [], createdAt: isoDaysFromNow(-9) },
+      { id: 't1', projectId: 'p1', name: 'Foundation excavation', description: 'Excavate and level foundation to -2.4m', phase: 'Foundation', assignedTo: 'Site Lead', status: 'complete', dueDate: isoDaysFromNow(-5), percentComplete: 100, budgetItemId: 'b1', zoneId: null, createdAt: isoDaysFromNow(-28) },
+      { id: 't2', projectId: 'p1', name: 'RMC pour — raft', description: 'M30 raft pour with pump', phase: 'Foundation', assignedTo: 'Concrete Crew', status: 'complete', dueDate: isoDaysFromNow(-12), percentComplete: 100, budgetItemId: 'b1', zoneId: null, createdAt: isoDaysFromNow(-25) },
+      { id: 't3', projectId: 'p1', name: 'Column framing — GF', description: 'Shuttering and rebar for ground floor columns', phase: 'Structure', assignedTo: 'Shuttering Crew', status: 'in-progress', dueDate: isoDaysFromNow(10), percentComplete: 30, budgetItemId: 'b3', zoneId: null, createdAt: isoDaysFromNow(-10) },
+      { id: 't4', projectId: 'p1', name: 'Slab casting — GF', description: 'Ground floor slab, 180mm', phase: 'Structure', assignedTo: 'Concrete Crew', status: 'pending', dueDate: isoDaysFromNow(18), percentComplete: 0, budgetItemId: 'b2', zoneId: null, createdAt: isoDaysFromNow(-5) },
+      { id: 't5', projectId: 'p1', name: 'Brickwork — GF partitions', description: 'AAC block partitions ground floor', phase: 'Structure', assignedTo: 'Mason Gang', status: 'pending', dueDate: isoDaysFromNow(26), percentComplete: 0, budgetItemId: 'b2', zoneId: null, createdAt: isoDaysFromNow(-3) },
+      { id: 't6', projectId: 'p2', name: 'Site mobilization', description: 'Fencing, site office, water and power', phase: 'Foundation', assignedTo: 'Site Lead', status: 'complete', dueDate: isoDaysFromNow(-14), percentComplete: 100, budgetItemId: 'b6', zoneId: null, createdAt: isoDaysFromNow(-20) },
+      { id: 't7', projectId: 'p2', name: 'Excavation — basement', description: 'Basement dig with shoring', phase: 'Foundation', assignedTo: 'Excavation Crew', status: 'in-progress', dueDate: isoDaysFromNow(-2), percentComplete: 80, budgetItemId: 'b6', zoneId: null, createdAt: isoDaysFromNow(-16) },
+      { id: 't8', projectId: 'p2', name: 'MEP rough-in — B1', description: 'Electrical conduits and plumbing sleeves', phase: 'MEP', assignedTo: 'GHI Electrical', status: 'in-progress', dueDate: isoDaysFromNow(15), percentComplete: 40, budgetItemId: 'b10', zoneId: null, createdAt: isoDaysFromNow(-8) },
+      { id: 't9', projectId: 'p2', name: 'Waterproofing — retaining walls', description: 'Membrane waterproofing on retaining walls', phase: 'Structure', assignedTo: 'Waterproofing Sub', status: 'pending', dueDate: isoDaysFromNow(22), percentComplete: 0, budgetItemId: 'b6', zoneId: null, createdAt: isoDaysFromNow(-4) },
+      { id: 't10', projectId: 'p3', name: 'Demolition survey', description: 'Survey and mark walls for demolition', phase: 'Foundation', assignedTo: 'Site Lead', status: 'pending', dueDate: isoDaysFromNow(14), percentComplete: 0, budgetItemId: 'b11', zoneId: null, createdAt: isoDaysFromNow(-2) },
+      { id: 't11', projectId: 'p1', name: 'External plumbing lines', description: 'Sewer connection and storm drains', phase: 'MEP', assignedTo: 'JKL Plumbing', status: 'in-progress', dueDate: isoDaysFromNow(8), percentComplete: 55, budgetItemId: 'b4', zoneId: null, createdAt: isoDaysFromNow(-12) },
+      { id: 't12', projectId: 'p1', name: 'Sample flat finishing', description: 'One-bedroom sample unit full finish', phase: 'Finishing', assignedTo: 'STU Finishing', status: 'in-progress', dueDate: isoDaysFromNow(20), percentComplete: 25, budgetItemId: 'b5', zoneId: null, createdAt: isoDaysFromNow(-9) },
     ],
     workOrders: [
       { id: 'w1', projectId: 'p1', orderNumber: 'WO-001', taskName: 'Excavation foundation', description: 'Complete excavation to design depth', assignee: 'Site Lead', priority: 'High', dueDate: isoDaysFromNow(-5), status: 'complete' },
@@ -163,6 +163,22 @@ export function buildMockState(): AppState {
       { id: 'b12', projectId: 'p3', description: 'Civil repairs', quantity: 1, unit: 'LS', unitRatePaise: rupees(5_00_000), actualSpendPaise: rupees(0) },
       { id: 'b13', projectId: 'p3', description: 'Interiors & finishing', quantity: 1, unit: 'LS', unitRatePaise: rupees(6_50_000), actualSpendPaise: rupees(0) },
     ],
+    // Zones: floor → room → element. Status is never stored here — it is
+    // derived from the tasks that build each zone, so a drawing can never
+    // disagree with the work underneath it.
+    zones: [
+      { id: 'z-p1-gf', projectId: 'p1', parentId: null, level: 'floor', name: 'Ground Floor', drawingId: null, outline: null },
+      { id: 'z-p1-ff', projectId: 'p1', parentId: null, level: 'floor', name: 'First Floor', drawingId: null, outline: null },
+      { id: 'z-p1-gf-liv', projectId: 'p1', parentId: 'z-p1-gf', level: 'room', name: 'Living Room', drawingId: null, outline: null },
+      { id: 'z-p1-gf-kit', projectId: 'p1', parentId: 'z-p1-gf', level: 'room', name: 'Kitchen', drawingId: null, outline: null },
+      { id: 'z-p1-gf-c4', projectId: 'p1', parentId: 'z-p1-gf-liv', level: 'element', name: 'Column C4', drawingId: null, outline: null },
+      { id: 'z-p1-gf-b2', projectId: 'p1', parentId: 'z-p1-gf-liv', level: 'element', name: 'Beam B2', drawingId: null, outline: null },
+      { id: 'z-p2-b1', projectId: 'p2', parentId: null, level: 'floor', name: 'Basement B1', drawingId: null, outline: null },
+      { id: 'z-p2-b1-park', projectId: 'p2', parentId: 'z-p2-b1', level: 'room', name: 'Parking Bay', drawingId: null, outline: null },
+    ],
+    // Seeded empty: photos are captured on site, and a fake data URL would
+    // only produce broken images in the gallery.
+    photos: [],
     activity: [
       { id: 'a1', message: 'Invoice ABC-45 (₹6L) created for ABC Concrete', timestamp: new Date().toISOString(), entity: 'invoice'  },
       { id: 'a2', message: 'Task "Excavation — basement" marked 80%', timestamp: new Date().toISOString(), entity: 'task'  },

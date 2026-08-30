@@ -48,6 +48,17 @@ export const CAPABILITIES = [
   'quality:view',
   'quality:manage',
 
+  // ── Block A: project record — photos, zones, permits ───────────────
+  'project-photos:view',
+  'project-photos:add',
+  'project-photos:delete',
+  'zones:view',
+  'zones:manage',
+  'documents:view',
+  'documents:manage',
+  'sop:view',
+  'sop:update',
+
   // ── Phase 5: commercial (Measurement Book → RA bill) ───────────────
   'billing:view',
   'billing:manage',
@@ -105,6 +116,11 @@ const SUPERVISOR: Capability[] = [
   'machinery:view',
   'machinery:record',
   'quality:view',
+  'project-photos:view',
+  'project-photos:add',
+  'zones:view',
+  'documents:view',
+  'sop:view',
 ];
 
 /** Site Engineer is a strict superset of Supervisor, per the brief — plus
@@ -119,6 +135,7 @@ const SITE_ENGINEER: Capability[] = [
   'inventory:request',
   'quality:manage',
   'billing:view',
+  'zones:manage',
 ];
 
 /** Project Manager / Civil Engineer — everything Site Engineer has, plus
@@ -140,6 +157,8 @@ const PROJECT_MANAGER: Capability[] = [
   'dpr:approve',
   'inventory:manage',
   'billing:manage',
+  'documents:manage',
+  'sop:update',
 ];
 
 /** The commercial counterpart to Site Engineer — holds precisely what that
@@ -162,6 +181,8 @@ const ACCOUNTANT: Capability[] = [
   'machinery:view',
   'billing:view',
   'billing:manage',
+  'documents:view',
+  'sop:view',
 ];
 
 const OWNER: Capability[] = [
@@ -169,6 +190,9 @@ const OWNER: Capability[] = [
     ...PROJECT_MANAGER,
     ...ACCOUNTANT,
     'payments:execute',
+    'project-photos:delete',
+    'documents:manage',
+    'sop:update',
     'admin:users',
     'admin:projects',
   ]),
@@ -221,6 +245,15 @@ export const ACCOUNT_TYPE_MASK: Partial<Record<AccountType, ReadonlySet<Capabili
     'payments:view',
     'reports:view',
     'admin:users',
+    // A client photographs their own property, and that record should be
+    // theirs. Note what is absent: `project-photos:delete`. A landlord can
+    // add evidence of a defect and neither they nor the contractor can
+    // quietly remove it — only the project's owner can.
+    'project-photos:view',
+    'project-photos:add',
+    'zones:view',
+    'documents:view',
+    'sop:view',
   ]),
 };
 
@@ -253,6 +286,8 @@ export const ENTITY_VIEW_CAPABILITY: Record<string, Capability> = {
   task: 'work-status:view',
   workOrder: 'work-orders:view',
   budgetItem: 'budgeting:view',
+  photo: 'project-photos:view',
+  zone: 'zones:view',
 };
 
 /** Resolve the effective capability set for a persona inside an account type.

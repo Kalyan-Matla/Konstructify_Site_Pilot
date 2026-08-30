@@ -1,6 +1,6 @@
 import { useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { Camera, CheckCircle2, HardHat, Pencil, Plus, Trash2 } from 'lucide-react';
-import type { TaskPhoto, TaskStatus, WorkTask } from '../types';
+import type { ProjectPhoto, TaskStatus, WorkTask } from '../types';
 import { useApp } from '../contexts/AppContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -86,6 +86,11 @@ export default function WorkStatus() {
   const viewingTask = viewing
     ? state.tasks.find((t) => t.id === viewing && canReachProject(t.projectId)) ?? null
     : null;
+
+  /** Photos now live on the project, tagged with a taskId — so the same
+   *  photo appears in the task and in the project gallery (Block B). */
+  const photoCountFor = (taskId: string) =>
+    state.photos.filter((ph) => ph.taskId === taskId).length;
 
   const bulkMarkComplete = () => {
     const items = state.tasks.filter((t) => selected.has(t.id) && t.status !== 'complete');
@@ -211,7 +216,7 @@ export default function WorkStatus() {
                   )}
                 </div>
                 <p className="mt-0.5 text-xs text-ink/55">
-                  {t.phase} · {t.assignedTo} · {t.photos.length} photo{t.photos.length === 1 ? '' : 's'}
+                  {t.phase} · {t.assignedTo} · {photoCountFor(t.id)} photo{photoCountFor(t.id) === 1 ? '' : 's'}
                 </p>
                 <div className="mt-2 flex items-center gap-2">
                   <div className="flex-1">
@@ -255,7 +260,7 @@ export default function WorkStatus() {
       {deleting && (
         <ConfirmDialog
           title="Delete task?"
-          message={`"${deleting.name}" and its ${deleting.photos.length} photo(s) will be removed.`}
+          message={`"${deleting.name}" will be removed. Its ${photoCountFor(deleting.id)} photo(s) stay in the project gallery.`}
           confirmLabel="Delete"
           onCancel={() => setDeleting(null)}
           onConfirm={() => {
@@ -316,7 +321,8 @@ function TaskForm({
       status: task?.status ?? 'pending',
       dueDate,
       percentComplete: task?.percentComplete ?? 0,
-      photos: task?.photos ?? [],
+      budgetItemId: task?.budgetItemId ?? null,
+      zoneId: task?.zoneId ?? null,
       createdAt: task?.createdAt ?? todayISO(),
     });
   };
@@ -367,14 +373,17 @@ function TaskForm({
 }
 
 function TaskDetail({ task, onClose }: { task: WorkTask; onClose: () => void }) {
-  const { state, upsert } = useApp();
-  const { can } = useAuth();
+  const { state, upsert, remove } = useApp();
+  const { can, user } = useAuth();
   const mayUpdate = can('work-status:update');
+  const mayAddPhoto = can('project-photos:add');
+  const mayDeletePhoto = can('project-photos:delete');
+  const photos = state.photos.filter((ph) => ph.taskId === task.id);
   const fileRef = useRef<HTMLInputElement>(null);
   const [aiDismissed, setAiDismissed] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const project = state.projects.find((p) => p.id === task.projectId);
-  const ai = suggestWorkStatus(task);
+  const ai = suggestWorkStatus(task, photos.length);
   const overdue = task.status !== 'complete' && daysUntil(task.dueDate) < 0;
 
   const setPercent = (pct: number) => {
@@ -395,13 +404,18 @@ function TaskDetail({ task, onClose }: { task: WorkTask; onClose: () => void }) 
     if (!file) return;
     try {
       const dataUrl = await resizeImage(file);
-      const photo: TaskPhoto = {
+      const photo: ProjectPhoto = {
         id: uid('ph'),
+        projectId: task.projectId,
+        taskId: task.id,
+        zoneId: task.zoneId,
         dataUrl,
         caption: file.name,
+        uploadedByUserId: user?.id ?? 'unknown',
+        uploadedByName: user?.name ?? 'Unknown',
         timestamp: new Date().toISOString(),
       };
-      upsert('task', { ...task, photos: [...task.photos, photo] }, `Photo added to "${task.name}"`);
+      upsert('photo', photo, `Photo added to "${task.name}"`);
       setUploadError('');
     } catch {
       setUploadError('Could not read that image. Try a different file.');
@@ -411,11 +425,7 @@ function TaskDetail({ task, onClose }: { task: WorkTask; onClose: () => void }) 
   };
 
   const removePhoto = (photoId: string) => {
-    upsert(
-      'task',
-      { ...task, photos: task.photos.filter((p) => p.id !== photoId) },
-      `Photo removed from "${task.name}"`,
-    );
+    remove('photo', photoId, `Photo removed from "${task.name}"`);
   };
 
   return (
@@ -454,8 +464,8 @@ function TaskDetail({ task, onClose }: { task: WorkTask; onClose: () => void }) 
       )}
 
       <div className="mt-4 flex items-center justify-between">
-        <h3 className="text-sm font-bold text-ink">Photos ({task.photos.length})</h3>
-        {mayUpdate && (
+        <h3 className="text-sm font-bold text-ink">Photos ({photos.length})</h3>
+        {mayAddPhoto && (
           <div>
             <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={addPhoto} aria-label="Upload site photo" />
             <button
@@ -469,17 +479,17 @@ function TaskDetail({ task, onClose }: { task: WorkTask; onClose: () => void }) 
         )}
       </div>
       {uploadError && <p role="alert" className="mt-1 text-xs text-red-600">{uploadError}</p>}
-      {task.photos.length === 0 ? (
+      {photos.length === 0 ? (
         <p className="mt-2 text-sm text-ink/55">No photos yet — capture progress from the site.</p>
       ) : (
         <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {task.photos.map((p) => (
+          {photos.map((p) => (
             <figure key={p.id} className="relative">
               <img src={p.dataUrl} alt={p.caption || 'Site photo'} className="h-24 w-full rounded object-cover" />
               <figcaption className="mt-0.5 truncate text-[10px] text-ink/55">
                 {formatDate(p.timestamp)}
               </figcaption>
-              {mayUpdate && (
+              {mayDeletePhoto && (
                 <button
                   type="button"
                   onClick={() => removePhoto(p.id)}

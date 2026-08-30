@@ -194,6 +194,54 @@ describe('AD-05 — landlord mask', () => {
   });
 });
 
+describe('Block A — project photos, zones and permits', () => {
+  test('everyone on site can add photos', () => {
+    for (const email of ['owner@konstructify.in', 'pm@konstructify.in',
+                         'engineer@konstructify.in', 'supervisor@konstructify.in']) {
+      expect(can(ctxFor(email), 'project-photos:add', { projectId: 'p1' })).toBe(true);
+    }
+  });
+
+  /** The asymmetry that makes the photo record trustworthy: a client can add
+   *  evidence of a defect, and neither they nor the contractor can quietly
+   *  remove it. Only the project's owner deletes. */
+  test('only the owner deletes photos', () => {
+    expect(can(ctxFor('owner@konstructify.in'), 'project-photos:delete')).toBe(true);
+    for (const email of ['pm@konstructify.in', 'engineer@konstructify.in',
+                         'supervisor@konstructify.in', 'accounts@konstructify.in']) {
+      expect(can(ctxFor(email), 'project-photos:delete')).toBe(false);
+    }
+  });
+
+  test('the landlord can photograph their own property but not delete', () => {
+    const ctx = ctxFor('priya@landlord.in');
+    expect(can(ctx, 'project-photos:add', { projectId: 'p3' })).toBe(true);
+    expect(can(ctx, 'project-photos:delete')).toBe(false);
+  });
+
+  test('the landlord write capability did not leak anything else in', () => {
+    const ctx = ctxFor('priya@landlord.in');
+    expect(can(ctx, 'zones:manage')).toBe(false);
+    expect(can(ctx, 'documents:manage')).toBe(false);
+    expect(can(ctx, 'sop:update')).toBe(false);
+    expect(can(ctx, 'work-status:manage', { projectId: 'p3' })).toBe(false);
+  });
+
+  test('site engineers define zones; supervisors only read them', () => {
+    expect(can(ctxFor('engineer@konstructify.in'), 'zones:manage', { projectId: 'p1' })).toBe(true);
+    expect(can(ctxFor('supervisor@konstructify.in'), 'zones:manage', { projectId: 'p1' })).toBe(false);
+    expect(can(ctxFor('supervisor@konstructify.in'), 'zones:view', { projectId: 'p1' })).toBe(true);
+  });
+
+  test('the accountant sees permits for compliance but does not author them', () => {
+    const ctx = ctxFor('accounts@konstructify.in');
+    expect(can(ctx, 'documents:view')).toBe(true);
+    expect(can(ctx, 'sop:view')).toBe(true);
+    expect(can(ctx, 'sop:update')).toBe(false);
+    expect(can(ctx, 'project-photos:add')).toBe(false);
+  });
+});
+
 describe('AD-05 — contractor is an account type, not a persona', () => {
   test('a contractor account runs a full Owner', () => {
     const ctx = ctxFor('owner@qureshi.in');
