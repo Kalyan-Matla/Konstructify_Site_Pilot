@@ -8,7 +8,8 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test": "bun test"
+    "test": "bun test",
+    "test:db": "bun test db/"
   },
   "dependencies": {
     "clsx": "^2.1.1",
@@ -19,6 +20,7 @@
     "react-router-dom": "^6.26.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
