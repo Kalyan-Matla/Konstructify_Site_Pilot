@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { FolderOpen, Pencil, Plus, Trash2 } from 'lucide-react';
-import type { Project, ProjectStatus } from '../types';
+import type { Jurisdiction, Project, ProjectStatus, ProjectType } from '../types';
 import { useApp } from '../contexts/AppContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useRouteAction } from '../hooks/useRouteAction';
@@ -248,6 +248,9 @@ function ProjectForm({
   const [startDate, setStartDate] = useState(project?.startDate ?? todayISO());
   const [endDate, setEndDate] = useState(project?.endDate ?? isoDaysFromNow(60));
   const [status, setStatus] = useState<ProjectStatus>(project?.status ?? 'in-progress');
+  const [type, setType] = useState<ProjectType>(project?.type ?? 'private');
+  const [plotArea, setPlotArea] = useState(project?.plotAreaSqm != null ? String(project.plotAreaSqm) : '');
+  const [height, setHeight] = useState(project?.buildingHeightM != null ? String(project.buildingHeightM) : '');
   const [error, setError] = useState('');
 
   const submit = (e: FormEvent) => {
@@ -266,6 +269,12 @@ function ProjectForm({
       startDate,
       endDate,
       status,
+      type,
+      // Government work follows CPWD; private work in this build follows
+      // Telangana. Other states are refused rather than defaulted.
+      jurisdiction: type === 'government' ? 'cpwd' : ('telangana' as Jurisdiction),
+      plotAreaSqm: plotArea.trim() === '' ? null : Number(plotArea),
+      buildingHeightM: height.trim() === '' ? null : Number(height),
     });
   };
 
@@ -286,6 +295,12 @@ function ProjectForm({
           <Field label="Total budget (₹)" htmlFor="pj-budget" required>
             <input id="pj-budget" type="number" min="1" className={inputCls} value={budget} onChange={(e) => setBudget(e.target.value)} required />
           </Field>
+          <Field label="Project type" htmlFor="pj-type">
+            <select id="pj-type" className={inputCls} value={type} onChange={(e) => setType(e.target.value as ProjectType)}>
+              <option value="private">Private</option>
+              <option value="government">Government</option>
+            </select>
+          </Field>
           <Field label="Status" htmlFor="pj-status">
             <select id="pj-status" className={inputCls} value={status} onChange={(e) => setStatus(e.target.value as ProjectStatus)}>
               <option value="in-progress">In progress</option>
@@ -299,6 +314,16 @@ function ProjectForm({
           <Field label="End date" htmlFor="pj-end" required>
             <input id="pj-end" type="date" className={inputCls} value={endDate} onChange={(e) => setEndDate(e.target.value)} required />
           </Field>
+          {type === 'private' && (
+            <>
+              <Field label="Plot area (m²)" htmlFor="pj-area">
+                <input id="pj-area" type="number" min="1" step="any" className={inputCls} value={plotArea} onChange={(e) => setPlotArea(e.target.value)} placeholder="decides the approval route" />
+              </Field>
+              <Field label="Building height (m)" htmlFor="pj-height">
+                <input id="pj-height" type="number" min="1" step="any" className={inputCls} value={height} onChange={(e) => setHeight(e.target.value)} />
+              </Field>
+            </>
+          )}
         </div>
         <div className="mt-4 flex justify-end gap-2">
           <button type="button" onClick={onClose} className="btn-ghost">

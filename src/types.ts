@@ -2,6 +2,16 @@ import type { Paise } from './utils/money';
 
 export type ProjectStatus = 'in-progress' | 'on-hold' | 'completed';
 
+/** Layer 4 of the authorization model, and the fork the approvals route
+ *  branches on. Until now this existed only as a `can()` parameter with no
+ *  field behind it — nothing could actually populate it. */
+export type ProjectType = 'government' | 'private';
+
+/** Which body's rules this project follows. One state authored properly
+ *  beats twenty authored vaguely, so Telangana is the only private
+ *  jurisdiction for now and others are refused rather than defaulted. */
+export type Jurisdiction = 'telangana' | 'cpwd';
+
 export interface Project {
   id: string;
   name: string;
@@ -11,6 +21,53 @@ export interface Project {
   startDate: string; // ISO date
   endDate: string; // ISO date
   status: ProjectStatus;
+  type: ProjectType;
+  jurisdiction: Jurisdiction;
+  /** Plot area in square metres. With height, decides the TS-bPASS tier —
+   *  so it is captured at creation, not discovered later. */
+  plotAreaSqm: number | null;
+  /** Proposed building height in metres. */
+  buildingHeightM: number | null;
+}
+
+/** Where a step sits. `not-applicable` matters as much as `done`: a project
+ *  with no borewell should be able to close that step honestly rather than
+ *  leave it open forever. */
+export type SopStepStatus = 'not-started' | 'in-progress' | 'done' | 'not-applicable';
+
+/** The live, per-project state of one checklist step. The step's text lives
+ *  in a template; only what the project did about it lives here. */
+export interface SopStepState {
+  id: string;
+  projectId: string;
+  /** Stable key into the template — survives the template being reworded. */
+  stepKey: string;
+  status: SopStepStatus;
+  /** The document that proves this step was completed. */
+  documentId: string | null;
+  note: string;
+  updatedAt: string;
+  updatedByName: string;
+}
+
+export type DocumentKind = 'permit' | 'noc' | 'sanction' | 'drawing' | 'other';
+
+export interface ProjectDocument {
+  id: string;
+  projectId: string;
+  name: string;
+  kind: DocumentKind;
+  /** Data URI now; a signed URL once storage moves in Phase 1. Named for
+   *  what it is to a reader, not for how it is currently transported. */
+  src: string;
+  mimeType: string;
+  sizeBytes: number;
+  uploadedByUserId: string;
+  uploadedByName: string;
+  timestamp: string;
+  /** Permits expire, and an expired one is worse than a missing one because
+   *  it looks satisfied. Null when the document does not lapse. */
+  expiresOn: string | null;
 }
 
 export type VendorCategory = 'material' | 'service' | 'labor' | 'equipment';
@@ -153,7 +210,9 @@ export type EntityKind =
   | 'workOrder'
   | 'budgetItem'
   | 'photo'
-  | 'zone';
+  | 'zone'
+  | 'sopStep'
+  | 'document';
 
 export interface SyncQueueItem {
   id: string;
@@ -174,6 +233,8 @@ export interface AppState {
   budgetItems: BudgetItem[];
   photos: ProjectPhoto[];
   zones: Zone[];
+  sopSteps: SopStepState[];
+  documents: ProjectDocument[];
   activity: ActivityItem[];
   syncQueue: SyncQueueItem[];
 }

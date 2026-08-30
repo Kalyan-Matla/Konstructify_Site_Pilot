@@ -16,10 +16,12 @@ import type {
   EntityKind,
   Invoice,
   Project,
+  ProjectDocument,
   ProjectPhoto,
   SyncQueueItem,
   Vendor,
   WorkOrder,
+  SopStepState,
   WorkTask,
   Zone,
 } from '../types';
@@ -34,7 +36,7 @@ import { useToast } from './ToastContext';
 const STORAGE_KEY = 'konstructify-state-v2';
 
 export type Entity =
-  | Project | Vendor | Invoice | WorkTask | WorkOrder | BudgetItem | ProjectPhoto | Zone;
+  | Project | Vendor | Invoice | WorkTask | WorkOrder | BudgetItem | ProjectPhoto | Zone | SopStepState | ProjectDocument;
 
 const collectionOf: Record<EntityKind, keyof AppState> = {
   project: 'projects',
@@ -45,6 +47,8 @@ const collectionOf: Record<EntityKind, keyof AppState> = {
   budgetItem: 'budgetItems',
   photo: 'photos',
   zone: 'zones',
+  sopStep: 'sopSteps',
+  document: 'documents',
 };
 
 type Action =

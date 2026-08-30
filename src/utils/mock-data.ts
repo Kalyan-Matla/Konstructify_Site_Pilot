@@ -48,6 +48,10 @@ export function buildMockState(): AppState {
         startDate: isoDaysFromNow(-30),
         endDate: isoDaysFromNow(30),
         status: 'in-progress',
+        type: 'private',
+        jurisdiction: 'telangana',
+        plotAreaSqm: 420,        // ≤500 m² and ≤10 m → instant approval
+        buildingHeightM: 9.5,
       },
       {
         id: 'p2',
@@ -58,6 +62,10 @@ export function buildMockState(): AppState {
         startDate: isoDaysFromNow(-20),
         endDate: isoDaysFromNow(70),
         status: 'in-progress',
+        type: 'private',
+        jurisdiction: 'telangana',
+        plotAreaSqm: 1800,       // above the instant limits → single window
+        buildingHeightM: 24,
       },
       {
         id: 'p3',
@@ -68,6 +76,10 @@ export function buildMockState(): AppState {
         startDate: isoDaysFromNow(10),
         endDate: isoDaysFromNow(55),
         status: 'on-hold',
+        type: 'government',
+        jurisdiction: 'cpwd',
+        plotAreaSqm: null,
+        buildingHeightM: null,
       },
     ],
     vendors: [
@@ -179,6 +191,10 @@ export function buildMockState(): AppState {
     // Seeded empty: photos are captured on site, and a fake data URL would
     // only produce broken images in the gallery.
     photos: [],
+    // Checklist state and documents start empty — they are filled by the
+    // project team as approvals are actually obtained.
+    sopSteps: [],
+    documents: [],
     activity: [
       { id: 'a1', message: 'Invoice ABC-45 (₹6L) created for ABC Concrete', timestamp: new Date().toISOString(), entity: 'invoice'  },
       { id: 'a2', message: 'Task "Excavation — basement" marked 80%', timestamp: new Date().toISOString(), entity: 'task'  },

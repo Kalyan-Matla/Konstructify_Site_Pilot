@@ -8,7 +8,8 @@ import {
   type Persona,
 } from './capabilities';
 
-export type ProjectType = 'government' | 'private';
+export type { ProjectType } from '../types';
+import type { ProjectType } from '../types';
 
 export interface Account {
   id: string;
