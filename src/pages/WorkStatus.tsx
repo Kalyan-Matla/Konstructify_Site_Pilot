@@ -1,6 +1,6 @@
 import { useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { Camera, CheckCircle2, HardHat, Pencil, Plus, Trash2 } from 'lucide-react';
-import type { ProjectPhoto, TaskStatus, WorkTask } from '../types';
+import type { TaskStatus, WorkTask } from '../types';
 import { useApp } from '../contexts/AppContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -23,6 +23,7 @@ import {
 import { suggestWorkStatus } from '../utils/ai-suggestions';
 import { daysUntil, formatDate, isoDaysFromNow, todayISO, uid } from '../utils/format';
 import { useRouteAction } from '../hooks/useRouteAction';
+import { usePhotoUpload } from '../hooks/usePhotoUpload';
 import { useBulkSelect } from '../hooks/useBulkSelect';
 import { useBulkDelete } from '../hooks/useBulkDelete';
 
@@ -33,30 +34,6 @@ function progressTone(pct: number): string {
   if (pct >= 50) return 'bg-yellow-500';
   if (pct >= 25) return 'bg-orange-500';
   return 'bg-red-500';
-}
-
-/** Resize an image file to ≤800px wide JPEG data URL (keeps localStorage small). */
-function resizeImage(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        const scale = Math.min(800 / img.width, 1);
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.round(img.width * scale);
-        canvas.height = Math.round(img.height * scale);
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return reject(new Error('canvas unsupported'));
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL('image/jpeg', 0.8));
-      };
-      img.onerror = () => reject(new Error('bad image'));
-      img.src = String(reader.result);
-    };
-    reader.onerror = () => reject(new Error('read failed'));
-    reader.readAsDataURL(file);
-  });
 }
 
 export default function WorkStatus() {
@@ -374,14 +351,19 @@ function TaskForm({
 
 function TaskDetail({ task, onClose }: { task: WorkTask; onClose: () => void }) {
   const { state, upsert, remove } = useApp();
-  const { can, user } = useAuth();
+  const { can } = useAuth();
   const mayUpdate = can('work-status:update');
   const mayAddPhoto = can('project-photos:add');
   const mayDeletePhoto = can('project-photos:delete');
   const photos = state.photos.filter((ph) => ph.taskId === task.id);
+  const { upload, error: uploadError } = usePhotoUpload({
+    projectId: task.projectId,
+    taskId: task.id,
+    zoneId: task.zoneId,
+    label: `"${task.name}"`,
+  });
   const fileRef = useRef<HTMLInputElement>(null);
   const [aiDismissed, setAiDismissed] = useState(false);
-  const [uploadError, setUploadError] = useState('');
   const project = state.projects.find((p) => p.id === task.projectId);
   const ai = suggestWorkStatus(task, photos.length);
   const overdue = task.status !== 'complete' && daysUntil(task.dueDate) < 0;
@@ -402,26 +384,8 @@ function TaskDetail({ task, onClose }: { task: WorkTask; onClose: () => void }) 
   const addPhoto = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    try {
-      const dataUrl = await resizeImage(file);
-      const photo: ProjectPhoto = {
-        id: uid('ph'),
-        projectId: task.projectId,
-        taskId: task.id,
-        zoneId: task.zoneId,
-        dataUrl,
-        caption: file.name,
-        uploadedByUserId: user?.id ?? 'unknown',
-        uploadedByName: user?.name ?? 'Unknown',
-        timestamp: new Date().toISOString(),
-      };
-      upsert('photo', photo, `Photo added to "${task.name}"`);
-      setUploadError('');
-    } catch {
-      setUploadError('Could not read that image. Try a different file.');
-    } finally {
-      if (fileRef.current) fileRef.current.value = '';
-    }
+    await upload(file);
+    if (fileRef.current) fileRef.current.value = '';
   };
 
   const removePhoto = (photoId: string) => {
@@ -485,7 +449,7 @@ function TaskDetail({ task, onClose }: { task: WorkTask; onClose: () => void }) 
         <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
           {photos.map((p) => (
             <figure key={p.id} className="relative">
-              <img src={p.dataUrl} alt={p.caption || 'Site photo'} className="h-24 w-full rounded object-cover" />
+              <img src={p.src} alt={p.caption || 'Site photo'} className="h-24 w-full rounded object-cover" />
               <figcaption className="mt-0.5 truncate text-[10px] text-ink/55">
                 {formatDate(p.timestamp)}
               </figcaption>

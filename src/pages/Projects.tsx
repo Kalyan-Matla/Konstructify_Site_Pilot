@@ -21,7 +21,8 @@ import {
   SyncBadge,
   inputCls,
 } from '../components/ui';
-import { creditUsed, projectEstimate, projectSpend } from '../utils/derive';
+import { creditUsed, projectEstimate, projectProgress, projectSpend } from '../utils/derive';
+import PhotoGallery from '../components/PhotoGallery';
 import { daysUntil, formatDate, formatINR, paiseToRupees, parseRupeeInput, todayISO, uid, isoDaysFromNow } from '../utils/format';
 
 type Filter = 'all' | ProjectStatus;
@@ -314,9 +315,13 @@ function ProjectForm({
 
 function ProjectDetail({ project, onClose }: { project: Project; onClose: () => void }) {
   const { state } = useApp();
+  const { can } = useAuth();
   const spent = projectSpend(project.id, state);
   const estimate = projectEstimate(project.id, state);
   const remaining = daysUntil(project.endDate);
+  // BOQ-value weighted, so cheap finished tasks cannot flatter the number.
+  const progress = projectProgress(project.id, state);
+  const seeMoney = can('budgeting:view', { projectId: project.id });
 
   const phases = useMemo(
     () =>
@@ -344,7 +349,9 @@ function ProjectDetail({ project, onClose }: { project: Project; onClose: () => 
   }, [state, project.id]);
 
   return (
-    <Modal title={project.name} onClose={onClose}>
+    <Modal title={project.name} onClose={onClose} size="wide">
+      <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+      <div className="min-w-0">
       <p className="text-sm text-ink/60">
         {project.location} · {project.clientName}
       </p>
@@ -352,6 +359,21 @@ function ProjectDetail({ project, onClose }: { project: Project; onClose: () => 
         {formatDate(project.startDate)} → {formatDate(project.endDate)} ·{' '}
         {remaining >= 0 ? `${remaining} days remaining` : `${-remaining} days past end`}
       </p>
+
+      <div className="mt-4 rounded-xl bg-ink/[0.04] p-3">
+        <div className="flex items-baseline justify-between">
+          <span className="text-xs font-bold uppercase tracking-wide text-ink/55">Completion</span>
+          <span className="num text-sm font-bold text-ink">{progress.percentComplete.toFixed(0)}%</span>
+        </div>
+        <div className="mt-1.5">
+          <ProgressBar percent={progress.percentComplete} tone="bg-emerald-500" />
+        </div>
+        <p className="mt-1.5 text-[11px] text-ink/50">
+          Weighted by BOQ value, so an expensive unstarted line still counts.
+          {progress.unlinkedTaskCount > 0 &&
+            ` ${progress.unlinkedTaskCount} task${progress.unlinkedTaskCount === 1 ? '' : 's'} not linked to a BOQ line and excluded.`}
+        </p>
+      </div>
 
       <h3 className="mt-4 text-sm font-bold text-ink">Budget snapshot</h3>
       <div className="mt-1 grid grid-cols-3 gap-2 text-sm">
@@ -384,21 +406,32 @@ function ProjectDetail({ project, onClose }: { project: Project; onClose: () => 
         ))}
       </div>
 
-      <h3 className="mt-4 text-sm font-bold text-ink">Vendors on this project</h3>
-      {vendorRows.length === 0 ? (
-        <p className="mt-1 text-sm text-ink/55">No invoices yet.</p>
-      ) : (
-        <ul className="mt-1 divide-y divide-ink/10 text-sm">
-          {vendorRows.map(({ vendor, spend, outstanding }) => (
-            <li key={vendor.id} className="flex justify-between py-1.5">
-              <span className="text-ink">{vendor.name}</span>
-              <span className="text-ink/60">
-                {formatINR(spend)} billed · {formatINR(outstanding)} open
-              </span>
-            </li>
-          ))}
-        </ul>
+      {seeMoney && (
+        <>
+          <h3 className="mt-4 text-sm font-bold text-ink">Vendors on this project</h3>
+          {vendorRows.length === 0 ? (
+            <p className="mt-1 text-sm text-ink/55">No invoices yet.</p>
+          ) : (
+            <ul className="mt-1 divide-y divide-ink/10 text-sm">
+              {vendorRows.map(({ vendor, spend, outstanding }) => (
+                <li key={vendor.id} className="flex justify-between py-1.5">
+                  <span className="text-ink">{vendor.name}</span>
+                  <span className="text-ink/60">
+                    {formatINR(spend)} billed · {formatINR(outstanding)} open
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
       )}
+      </div>
+
+      {/* Right column — the project's photo record, scrolling, tap to preview */}
+      <div className="min-w-0 border-t border-ink/10 pt-5 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
+        <PhotoGallery projectId={project.id} projectName={project.name} />
+      </div>
+      </div>
     </Modal>
   );
 }

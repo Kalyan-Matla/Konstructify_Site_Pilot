@@ -127,10 +127,14 @@ export function Modal({
   title,
   onClose,
   children,
+  /** `wide` gives split-screen content room — the project view puts details
+   *  beside a photo strip, which is unreadable at the default width. */
+  size = 'default',
 }: {
   title: string;
   onClose: () => void;
   children: ReactNode;
+  size?: 'default' | 'wide';
 }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -152,7 +156,10 @@ export function Modal({
         aria-modal="true"
         aria-label={title}
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[92vh] w-full animate-pop-in overflow-y-auto rounded-t-3xl bg-paper-soft p-5 shadow-lift sm:max-w-lg sm:rounded-3xl sm:p-6"
+        className={clsx(
+          'max-h-[92vh] w-full animate-pop-in overflow-y-auto rounded-t-3xl bg-paper-soft p-5 shadow-lift sm:rounded-3xl sm:p-6',
+          size === 'wide' ? 'sm:max-w-4xl' : 'sm:max-w-lg',
+        )}
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="font-display text-xl text-ink">{title}</h2>

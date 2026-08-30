@@ -63,7 +63,7 @@ export interface ProjectPhoto {
   taskId: string | null;
   /** Set when the photo documents a specific zone (a room, a column). */
   zoneId: string | null;
-  dataUrl: string;
+  src: string;
   caption: string;
   /** Who added it — a client's photo of a defect must stay attributable. */
   uploadedByUserId: string;
