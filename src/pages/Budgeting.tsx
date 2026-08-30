@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { IndianRupee, Pencil, Plus, Trash2 } from 'lucide-react';
 import type { BudgetItem } from '../types';
 import { useApp } from '../contexts/AppContext';
+import { useAuth } from '../contexts/AuthContext';
 import {
   AICard,
   Badge,
@@ -26,7 +27,11 @@ const UNITS = ['LS', 'm³', 'sqft', 'MT', 'bags', 'pcs', 'days'];
 
 export default function Budgeting() {
   const { state, upsert, remove } = useApp();
-  const [projectId, setProjectId] = useState(state.projects[0]?.id ?? '');
+  const { can, canReachProject } = useAuth();
+  const manage = can('budgeting:manage');
+  // Layer 3 — only assigned projects are selectable or visible here.
+  const reachableProjects = state.projects.filter((p) => canReachProject(p.id));
+  const [projectId, setProjectId] = useState(reachableProjects[0]?.id ?? '');
   const [editing, setEditing] = useState<BudgetItem | 'new' | null>(null);
   const [deleting, setDeleting] = useState<BudgetItem | null>(null);
   const [bulkDeleting, setBulkDeleting] = useState(false);
@@ -34,7 +39,7 @@ export default function Budgeting() {
   const { selected, toggle, clear, setAll } = useBulkSelect();
   const bulkDelete = useBulkDelete<BudgetItem>('budgetItem', 'BOQ item');
 
-  useRouteAction({ openNew: () => setEditing('new') });
+  useRouteAction({ openNew: () => { if (manage) setEditing('new'); } });
 
   const project = state.projects.find((p) => p.id === projectId);
   const items = state.budgetItems.filter((b) => b.projectId === projectId);
@@ -49,13 +54,15 @@ export default function Budgeting() {
         title="Budgeting"
         subtitle="BOQ estimates vs. actual spend"
         action={
-          <button
-            type="button"
-            onClick={() => setEditing('new')}
-            className="btn-primary flex items-center gap-1.5"
-          >
-            <Plus size={16} aria-hidden="true" /> New BOQ item
-          </button>
+          manage ? (
+            <button
+              type="button"
+              onClick={() => setEditing('new')}
+              className="btn-primary flex items-center gap-1.5"
+            >
+              <Plus size={16} aria-hidden="true" /> New BOQ item
+            </button>
+          ) : undefined
         }
       />
 
@@ -70,7 +77,7 @@ export default function Budgeting() {
             clear();
           }}
         >
-          {state.projects.map((p) => (
+          {reachableProjects.map((p) => (
             <option key={p.id} value={p.id}>{p.name}</option>
           ))}
         </select>
@@ -90,13 +97,15 @@ export default function Budgeting() {
       {ai && !aiDismissed && <AICard suggestion={ai} onDismiss={() => setAiDismissed(true)} />}
 
       <BulkBar count={selected.size} itemLabel="BOQ item" onClear={clear}>
-        <button
-          type="button"
-          onClick={() => setBulkDeleting(true)}
-          className="flex items-center gap-1.5 rounded-xl bg-red-600 px-3 py-1.5 text-xs font-bold text-white transition-[transform,background-color] duration-200 ease-out hover:bg-red-500 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
-        >
-          <Trash2 size={14} aria-hidden="true" /> Delete
-        </button>
+        {manage && (
+          <button
+            type="button"
+            onClick={() => setBulkDeleting(true)}
+            className="flex items-center gap-1.5 rounded-xl bg-red-600 px-3 py-1.5 text-xs font-bold text-white transition-[transform,background-color] duration-200 ease-out hover:bg-red-500 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+          >
+            <Trash2 size={14} aria-hidden="true" /> Delete
+          </button>
+        )}
       </BulkBar>
 
       {items.length === 0 ? (
@@ -104,7 +113,7 @@ export default function Budgeting() {
           icon={IndianRupee}
           title="No BOQ items yet"
           message={`Add a bill-of-quantities line for ${project?.name ?? 'this project'} to track estimate against actual spend.`}
-          action={{ label: 'New BOQ item', onClick: () => setEditing('new') }}
+          action={manage ? { label: 'New BOQ item', onClick: () => setEditing('new') } : undefined}
         />
       ) : (
         <div className="overflow-x-auto panel">
@@ -112,6 +121,7 @@ export default function Budgeting() {
             <thead>
               <tr className="border-b border-ink/10 bg-paper-soft text-left text-[11px] font-bold uppercase tracking-wider text-ink/60">
                 <th scope="col" className="w-10 px-4 py-2.5">
+                  {manage && (
                   <BulkCheckbox
                     checked={items.length > 0 && items.every((b) => selected.has(b.id))}
                     onChange={() =>
@@ -119,6 +129,7 @@ export default function Budgeting() {
                     }
                     ariaLabel="Select all BOQ items"
                   />
+                  )}
                 </th>
                 <th scope="col" className="px-4 py-2.5">Item</th>
                 <th scope="col" className="px-4 py-2.5 text-right">Qty</th>
@@ -141,11 +152,13 @@ export default function Budgeting() {
                     className={`border-b border-ink/10 transition-colors last:border-0 hover:bg-paper-soft ${selected.has(b.id) ? 'bg-amber-50' : ''}`}
                   >
                     <td className="px-4 py-2.5">
-                      <BulkCheckbox
-                        checked={selected.has(b.id)}
-                        onChange={() => toggle(b.id)}
-                        ariaLabel={`Select ${b.description} for bulk actions`}
-                      />
+                      {manage && (
+                        <BulkCheckbox
+                          checked={selected.has(b.id)}
+                          onChange={() => toggle(b.id)}
+                          ariaLabel={`Select ${b.description} for bulk actions`}
+                        />
+                      )}
                     </td>
                     <td className="px-4 py-2.5">
                       <p className="font-medium text-ink">{b.description}</p>
@@ -167,6 +180,7 @@ export default function Budgeting() {
                       )}
                     </td>
                     <td className="px-4 py-2.5 text-right">
+                      {manage && (
                       <div className="flex gap-1">
                         <button type="button" onClick={() => setEditing(b)} aria-label={`Edit ${b.description}`} className="rounded p-1.5 text-ink/55 hover:bg-paper-soft hover:text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
                           <Pencil size={15} />
@@ -175,6 +189,7 @@ export default function Budgeting() {
                           <Trash2 size={15} />
                         </button>
                       </div>
+                      )}
                     </td>
                   </tr>
                 );

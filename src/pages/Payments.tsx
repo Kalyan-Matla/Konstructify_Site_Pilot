@@ -20,6 +20,7 @@ import { suggestPayment } from '../utils/ai-suggestions';
 import { daysSince, daysUntil, formatDate, formatINR, todayISO, uid } from '../utils/format';
 import { useRouteAction } from '../hooks/useRouteAction';
 import { useToast } from '../contexts/ToastContext';
+import { useAuth } from '../contexts/AuthContext';
 
 type Filter = 'all' | InvoiceStatus | 'overdue';
 
@@ -41,6 +42,7 @@ function statusBadge(i: Invoice) {
 
 export default function Payments() {
   const { state, upsert, remove } = useApp();
+  const { can, canReachProject } = useAuth();
   const [filter, setFilter] = useState<Filter>('all');
   const [creating, setCreating] = useState(false);
   const [paying, setPaying] = useState<Invoice | null>(null);
@@ -49,21 +51,43 @@ export default function Payments() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkPaying, setBulkPaying] = useState(false);
 
-  useRouteAction({ openNew: () => setCreating(true) });
+  // This page is vendor-side money. `payments:view` opens the route, but the
+  // invoices on it are bills to suppliers — seeing them requires vendors:view
+  // too (a landlord holds payments:view for their OWN billing, which arrives
+  // with cross-tenant grants in Phase 6). Releasing money is execute-only.
+  const seeVendorMoney = can('vendors:view');
+  const mayPay = can('payments:execute');
 
+  useRouteAction({ openNew: () => mayPay && setCreating(true) });
+
+  // Layer 3 — a project-scoped persona sees only invoices on their projects.
   const invoices = useMemo(
     () =>
       state.invoices
+        .filter((i) => canReachProject(i.projectId))
         .filter((i) => {
           if (filter === 'all') return true;
           if (filter === 'overdue') return i.status === 'unpaid' && daysSince(i.dueDate) > 0;
           return i.status === filter;
         })
         .sort((a, b) => a.dueDate.localeCompare(b.dueDate)),
-    [state.invoices, filter],
+    [state.invoices, filter, canReachProject],
   );
 
-  const ai = suggestPayment(state.invoices, state.vendors);
+  const ai = mayPay ? suggestPayment(state.invoices, state.vendors) : null;
+
+  if (!seeVendorMoney) {
+    return (
+      <div>
+        <PageHeader title="Payments" subtitle="Your billing and payment milestones" />
+        <EmptyState
+          icon={FileText}
+          title="Your contractor billing will appear here"
+          message="Payment milestones you agree with your contractor arrive with project sharing. Your contractor's own supplier bills are theirs, not yours — so there's nothing to show yet."
+        />
+      </div>
+    );
+  }
 
   const markPaid = (i: Invoice) => {
     const v = state.vendors.find((x) => x.id === i.vendorId);
@@ -97,13 +121,15 @@ export default function Payments() {
         title="Payments"
         subtitle="Invoices, NEFT/RTGS scheduling and settlement"
         action={
-          <button
-            type="button"
-            onClick={() => setCreating(true)}
-            className="btn-primary flex items-center gap-1.5"
-          >
-            <Plus size={16} aria-hidden="true" /> New invoice
-          </button>
+          mayPay ? (
+            <button
+              type="button"
+              onClick={() => setCreating(true)}
+              className="btn-primary flex items-center gap-1.5"
+            >
+              <Plus size={16} aria-hidden="true" /> New invoice
+            </button>
+          ) : undefined
         }
       />
 
@@ -125,7 +151,7 @@ export default function Payments() {
             </button>
           ))}
         </div>
-        {unpaidVisible.length > 0 && (
+        {mayPay && unpaidVisible.length > 0 && (
           <label className="-my-3.5 flex cursor-pointer items-center gap-2 py-3.5 text-xs font-semibold text-ink/55">
             <input
               type="checkbox"
@@ -166,14 +192,14 @@ export default function Payments() {
           icon={FileText}
           title="No invoices here"
           message="Log a vendor bill against a project — it draws down their credit and schedules the due date."
-          action={{ label: 'New invoice', onClick: () => setCreating(true) }}
+          action={mayPay ? { label: 'New invoice', onClick: () => setCreating(true) } : undefined}
         />
       ) : (
         <div className="stagger space-y-2">
           {invoices.map((i) => {
             const vendor = state.vendors.find((v) => v.id === i.vendorId);
             const project = state.projects.find((p) => p.id === i.projectId);
-            const isSelectable = i.status === 'unpaid';
+            const isSelectable = mayPay && i.status === 'unpaid';
             return (
               <div
                 key={i.id}
@@ -213,34 +239,36 @@ export default function Payments() {
                   </span>
                   <SyncBadge entity="invoice" id={i.id} />
                 </div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {i.status === 'unpaid' && (
+                {mayPay && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {i.status === 'unpaid' && (
+                      <button
+                        type="button"
+                        onClick={() => setPaying(i)}
+                        className="btn-primary btn-sm flex items-center gap-1"
+                      >
+                        <Send size={14} aria-hidden="true" /> Pay
+                      </button>
+                    )}
+                    {i.status === 'payment-sent' && (
+                      <button
+                        type="button"
+                        onClick={() => markPaid(i)}
+                        className="btn-success btn-sm flex items-center gap-1"
+                      >
+                        <CheckCircle2 size={14} aria-hidden="true" /> Mark paid
+                      </button>
+                    )}
                     <button
                       type="button"
-                      onClick={() => setPaying(i)}
-                      className="btn-primary btn-sm flex items-center gap-1"
+                      onClick={() => setDeleting(i)}
+                      aria-label={`Delete invoice ${i.invoiceNumber}`}
+                      className="btn-ghost btn-sm flex items-center gap-1 hover:text-red-600"
                     >
-                      <Send size={14} aria-hidden="true" /> Pay
+                      <Trash2 size={14} aria-hidden="true" /> Delete
                     </button>
-                  )}
-                  {i.status === 'payment-sent' && (
-                    <button
-                      type="button"
-                      onClick={() => markPaid(i)}
-                      className="btn-success btn-sm flex items-center gap-1"
-                    >
-                      <CheckCircle2 size={14} aria-hidden="true" /> Mark paid
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setDeleting(i)}
-                    aria-label={`Delete invoice ${i.invoiceNumber}`}
-                    className="btn-ghost btn-sm flex items-center gap-1 hover:text-red-600"
-                  >
-                    <Trash2 size={14} aria-hidden="true" /> Delete
-                  </button>
-                </div>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -277,8 +305,11 @@ export default function Payments() {
 
 function InvoiceForm({ onClose }: { onClose: () => void }) {
   const { state, upsert } = useApp();
+  const { canReachProject } = useAuth();
+  // Layer 3 — an invoice can only be raised against a project you can reach.
+  const projects = state.projects.filter((p) => canReachProject(p.id));
   const [vendorId, setVendorId] = useState(state.vendors[0]?.id ?? '');
-  const [projectId, setProjectId] = useState(state.projects[0]?.id ?? '');
+  const [projectId, setProjectId] = useState(projects[0]?.id ?? '');
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [amount, setAmount] = useState('');
   const [invoiceDate, setInvoiceDate] = useState(todayISO());
@@ -340,7 +371,7 @@ function InvoiceForm({ onClose }: { onClose: () => void }) {
           </Field>
           <Field label="Project" htmlFor="in-project">
             <select id="in-project" className={inputCls} value={projectId} onChange={(e) => setProjectId(e.target.value)}>
-              {state.projects.map((p) => (
+              {projects.map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>

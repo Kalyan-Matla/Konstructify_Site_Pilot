@@ -2,6 +2,7 @@ import { useMemo, useState, type FormEvent } from 'react';
 import { FolderOpen, Pencil, Plus, Trash2 } from 'lucide-react';
 import type { Project, ProjectStatus } from '../types';
 import { useApp } from '../contexts/AppContext';
+import { useAuth } from '../contexts/AuthContext';
 import { useRouteAction } from '../hooks/useRouteAction';
 import { useBulkSelect } from '../hooks/useBulkSelect';
 import { useBulkDelete } from '../hooks/useBulkDelete';
@@ -29,6 +30,8 @@ const PHASES = ['Foundation', 'Structure', 'MEP', 'Finishing'];
 
 export default function Projects() {
   const { state, upsert, remove } = useApp();
+  const { can, canReachProject } = useAuth();
+  const manage = can('projects:manage');
   const [filter, setFilter] = useState<Filter>('all');
   const [editing, setEditing] = useState<Project | 'new' | null>(null);
   const [viewing, setViewing] = useState<Project | null>(null);
@@ -38,14 +41,17 @@ export default function Projects() {
   const bulkDelete = useBulkDelete<Project>('project', 'project');
 
   useRouteAction({
-    openNew: () => setEditing('new'),
+    openNew: () => { if (manage) setEditing('new'); },
     openView: (id) => {
       const p = state.projects.find((x) => x.id === id);
-      if (p) setViewing(p);
+      if (p && canReachProject(p.id)) setViewing(p);
     },
   });
 
-  const projects = state.projects.filter((p) => filter === 'all' || p.status === filter);
+  // Layer 3 — scoped personas see only their assigned projects.
+  const projects = state.projects.filter(
+    (p) => canReachProject(p.id) && (filter === 'all' || p.status === filter),
+  );
 
   return (
     <div>
@@ -53,13 +59,15 @@ export default function Projects() {
         title="Projects"
         subtitle={`${state.projects.length} total`}
         action={
-          <button
-            type="button"
-            onClick={() => setEditing('new')}
-            className="btn-primary flex items-center gap-1.5"
-          >
-            <Plus size={16} aria-hidden="true" /> New project
-          </button>
+          manage ? (
+            <button
+              type="button"
+              onClick={() => setEditing('new')}
+              className="btn-primary flex items-center gap-1.5"
+            >
+              <Plus size={16} aria-hidden="true" /> New project
+            </button>
+          ) : undefined
         }
       />
 
@@ -79,7 +87,7 @@ export default function Projects() {
             </button>
           ))}
         </div>
-        {projects.length > 0 && (
+        {manage && projects.length > 0 && (
           <SelectAllToggle
             checked={projects.every((p) => selected.has(p.id))}
             onChange={() =>
@@ -105,7 +113,7 @@ export default function Projects() {
           icon={FolderOpen}
           title="No projects to show"
           message="Spin up a project with its budget and timeline to start tracking spend and progress."
-          action={{ label: 'New project', onClick: () => setEditing('new') }}
+          action={manage ? { label: 'New project', onClick: () => setEditing('new') } : undefined}
         />
       ) : (
         <div className="stagger grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -120,11 +128,13 @@ export default function Projects() {
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex min-w-0 items-start gap-2">
-                    <BulkCheckbox
-                      checked={selected.has(p.id)}
-                      onChange={() => toggle(p.id)}
-                      ariaLabel={`Select ${p.name} for bulk actions`}
-                    />
+                    {manage && (
+                      <BulkCheckbox
+                        checked={selected.has(p.id)}
+                        onChange={() => toggle(p.id)}
+                        ariaLabel={`Select ${p.name} for bulk actions`}
+                      />
+                    )}
                     <button
                       type="button"
                       onClick={() => setViewing(p)}
@@ -150,6 +160,7 @@ export default function Projects() {
                 </p>
                 <div className="mt-3 flex items-center justify-between">
                   <SyncBadge entity="project" id={p.id} />
+                  {manage && (
                   <div className="flex gap-1">
                     <button
                       type="button"
@@ -168,6 +179,7 @@ export default function Projects() {
                       <Trash2 size={16} />
                     </button>
                   </div>
+                  )}
                 </div>
               </div>
             );

@@ -137,7 +137,9 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
       run: () => go('/projects', { openView: p.id }),
     }));
 
-    const invoices: PaletteItem[] = (can('payments:view') ? state.invoices : []).map((i) => {
+    const invoices: PaletteItem[] = (
+      can('payments:view') ? state.invoices.filter((i) => canReachProject(i.projectId)) : []
+    ).map((i) => {
       const vendor = state.vendors.find((v) => v.id === i.vendorId);
       return {
         id: `invoice-${i.id}`,

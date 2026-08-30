@@ -119,6 +119,30 @@ describe('layer 3 — project assignment', () => {
   });
 });
 
+describe('update vs manage — the split the field UI leans on', () => {
+  /** Supervisor updates work on site (progress, photos) but never creates,
+   *  edits or deletes the tasks and orders themselves. The page-level action
+   *  gating renders controls off exactly this split — lock it down. */
+  test('supervisor updates work status but does not manage it', () => {
+    const ctx = ctxFor('supervisor@konstructify.in');
+    expect(can(ctx, 'work-status:update', { projectId: 'p1' })).toBe(true);
+    expect(can(ctx, 'work-status:manage', { projectId: 'p1' })).toBe(false);
+  });
+
+  test('supervisor views work orders but neither updates nor manages them', () => {
+    const ctx = ctxFor('supervisor@konstructify.in');
+    expect(can(ctx, 'work-orders:view', { projectId: 'p1' })).toBe(true);
+    expect(can(ctx, 'work-orders:update', { projectId: 'p1' })).toBe(false);
+    expect(can(ctx, 'work-orders:manage', { projectId: 'p1' })).toBe(false);
+  });
+
+  test('site engineer completes work orders but cannot create or delete them', () => {
+    const ctx = ctxFor('engineer@konstructify.in');
+    expect(can(ctx, 'work-orders:update', { projectId: 'p1' })).toBe(true);
+    expect(can(ctx, 'work-orders:manage', { projectId: 'p1' })).toBe(false);
+  });
+});
+
 describe('AD-05 — landlord mask', () => {
   const landlord = () => ctxFor('priya@landlord.in');
 

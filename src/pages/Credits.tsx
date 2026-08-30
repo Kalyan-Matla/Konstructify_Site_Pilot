@@ -17,6 +17,10 @@ import { suggestPayment, suggestVendor } from '../utils/ai-suggestions';
 import { daysUntil, formatINR } from '../utils/format';
 
 export default function Credits() {
+  // Deliberately account-level, not project-scoped: a vendor's credit limit
+  // and exposure are properties of the vendor relationship, and splitting
+  // them by project would show a number that is simply false. The route is
+  // gated on credits:view, which only account-wide money roles hold.
   const { state } = useApp();
   const navigate = useNavigate();
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
