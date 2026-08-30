@@ -22,7 +22,7 @@ import {
   inputCls,
 } from '../components/ui';
 import { creditUsed, projectEstimate, projectSpend } from '../utils/derive';
-import { daysUntil, formatDate, formatINR, todayISO, uid, isoDaysFromNow } from '../utils/format';
+import { daysUntil, formatDate, formatINR, paiseToRupees, parseRupeeInput, todayISO, uid, isoDaysFromNow } from '../utils/format';
 
 type Filter = 'all' | ProjectStatus;
 
@@ -119,7 +119,7 @@ export default function Projects() {
         <div className="stagger grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {projects.map((p) => {
             const spent = projectSpend(p.id, state);
-            const over = spent > p.budget;
+            const over = spent > p.budgetPaise;
             const remaining = daysUntil(p.endDate);
             return (
               <div
@@ -149,10 +149,10 @@ export default function Projects() {
                 </div>
                 <p className="mt-1 text-sm text-ink/60">{p.location} · {p.clientName}</p>
                 <p className="mt-2 text-sm text-ink">
-                  {formatINR(spent)} / {formatINR(p.budget)}
+                  {formatINR(spent)} / {formatINR(p.budgetPaise)}
                 </p>
                 <div className="mt-1.5">
-                  <ProgressBar percent={p.budget > 0 ? (spent / p.budget) * 100 : 0} />
+                  <ProgressBar percent={p.budgetPaise > 0 ? (spent / p.budgetPaise) * 100 : 0} />
                 </div>
                 <p className="mt-2 text-xs text-ink/55">
                   {formatDate(p.startDate)} → {formatDate(p.endDate)} ·{' '}
@@ -243,7 +243,7 @@ function ProjectForm({
   const [name, setName] = useState(project?.name ?? '');
   const [location, setLocation] = useState(project?.location ?? '');
   const [clientName, setClientName] = useState(project?.clientName ?? '');
-  const [budget, setBudget] = useState(project ? String(project.budget) : '');
+  const [budget, setBudget] = useState(project ? String(paiseToRupees(project.budgetPaise)) : '');
   const [startDate, setStartDate] = useState(project?.startDate ?? todayISO());
   const [endDate, setEndDate] = useState(project?.endDate ?? isoDaysFromNow(60));
   const [status, setStatus] = useState<ProjectStatus>(project?.status ?? 'in-progress');
@@ -251,16 +251,17 @@ function ProjectForm({
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    const b = Number(budget);
+    // Rupees in, paise stored — the conversion happens here, at the boundary.
+    const budgetPaise = parseRupeeInput(budget);
     if (!name.trim() || !location.trim() || !clientName.trim()) return setError('All fields are required.');
-    if (!Number.isFinite(b) || b <= 0) return setError('Budget must be greater than 0.');
+    if (budgetPaise === null || budgetPaise <= 0) return setError('Budget must be greater than 0.');
     if (startDate >= endDate) return setError('Start date must be before end date.');
     onSave({
       id: project?.id ?? uid('p'),
       name: name.trim(),
       location: location.trim(),
       clientName: clientName.trim(),
-      budget: b,
+      budgetPaise,
       startDate,
       endDate,
       status,
@@ -337,7 +338,7 @@ function ProjectDetail({ project, onClose }: { project: Project; onClose: () => 
         vendor: v,
         spend: state.invoices
           .filter((i) => i.projectId === project.id && i.vendorId === v.id)
-          .reduce((s, i) => s + i.amount, 0),
+          .reduce((s, i) => s + i.amountPaise, 0),
         outstanding: creditUsed(v.id, state.invoices.filter((i) => i.projectId === project.id)),
       }));
   }, [state, project.id]);
@@ -364,7 +365,7 @@ function ProjectDetail({ project, onClose }: { project: Project; onClose: () => 
         </div>
         <div className="rounded bg-paper-soft p-2">
           <p className="text-xs text-ink/55">Sanctioned</p>
-          <p className="font-semibold">{formatINR(project.budget)}</p>
+          <p className="font-semibold">{formatINR(project.budgetPaise)}</p>
         </div>
       </div>
 

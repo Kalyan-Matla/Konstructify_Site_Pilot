@@ -30,7 +30,7 @@ import {
   type CreditHealth,
 } from '../utils/derive';
 import { suggestVendor } from '../utils/ai-suggestions';
-import { formatDate, formatINR, uid } from '../utils/format';
+import { formatDate, formatINR, paiseToRupees, parseRupeeInput, uid } from '../utils/format';
 import { useRouteAction } from '../hooks/useRouteAction';
 import { useBulkSelect } from '../hooks/useBulkSelect';
 import { useBulkDelete } from '../hooks/useBulkDelete';
@@ -180,7 +180,7 @@ export default function Vendors() {
                   <div className="flex justify-between text-sm">
                     <span className="text-ink/60">Credit used</span>
                     <span className="font-semibold text-ink">
-                      {formatINR(used)} / {formatINR(v.creditLimit)}
+                      {formatINR(used)} / {formatINR(v.creditLimitPaise)}
                     </span>
                   </div>
                   <ProgressBar percent={pct} />
@@ -283,16 +283,16 @@ function VendorForm({
   const [gstId, setGstId] = useState(vendor?.gstId ?? '');
   const [bankAccount, setBankAccount] = useState(vendor?.bankAccount ?? '');
   const [bankIfsc, setBankIfsc] = useState(vendor?.bankIfsc ?? '');
-  const [creditLimit, setCreditLimit] = useState(vendor ? String(vendor.creditLimit) : '');
+  const [creditLimit, setCreditLimit] = useState(vendor ? String(paiseToRupees(vendor.creditLimitPaise)) : '');
   const [paymentTerms, setPaymentTerms] = useState<PaymentTerms>(vendor?.paymentTerms ?? '14-day');
   const [error, setError] = useState('');
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    const limit = Number(creditLimit);
+    const creditLimitPaise = parseRupeeInput(creditLimit);
     if (!name.trim()) return setError('Vendor name is required.');
     if (!/^\d{10}$/.test(phone)) return setError('Phone must be a 10-digit number.');
-    if (!Number.isFinite(limit) || limit <= 0) return setError('Credit limit must be greater than 0.');
+    if (creditLimitPaise === null || creditLimitPaise <= 0) return setError('Credit limit must be greater than 0.');
     if (gstId && !/^[0-9]{2}[A-Z0-9]{13}$/.test(gstId)) return setError('GST ID must be 15 characters (e.g. 27AABCT1234H1Z0).');
     onSave({
       id: vendor?.id ?? uid('v'),
@@ -303,7 +303,7 @@ function VendorForm({
       gstId: gstId.trim(),
       bankAccount: bankAccount.trim(),
       bankIfsc: bankIfsc.trim(),
-      creditLimit: limit,
+      creditLimitPaise,
       paymentTerms,
       ratingQuality: vendor?.ratingQuality ?? 4.0,
       ratingDelivery: vendor?.ratingDelivery ?? 4.0,
@@ -406,7 +406,7 @@ function VendorDetail({ vendor, onClose }: { vendor: Vendor; onClose: () => void
         <div className="flex justify-between text-sm">
           <span className="text-ink/60">Credit used ({pct.toFixed(0)}%)</span>
           <span className="font-semibold text-ink">
-            {formatINR(used)} / {formatINR(vendor.creditLimit)}
+            {formatINR(used)} / {formatINR(vendor.creditLimitPaise)}
           </span>
         </div>
         <div className="mt-1.5">
@@ -463,7 +463,7 @@ function VendorDetail({ vendor, onClose }: { vendor: Vendor; onClose: () => void
               {i.invoiceNumber} · {formatDate(i.invoiceDate)}
             </span>
             <span className="flex items-center gap-2">
-              <span className="font-medium text-ink">{formatINR(i.amount)}</span>
+              <span className="font-medium text-ink">{formatINR(i.amountPaise)}</span>
               {i.status === 'paid' ? (
                 <Badge tone="green">paid</Badge>
               ) : i.status === 'payment-sent' ? (

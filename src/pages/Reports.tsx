@@ -11,13 +11,13 @@ import {
   projectEstimate,
   projectSpend,
 } from '../utils/derive';
-import { daysSince, daysUntil, formatINR } from '../utils/format';
+import { daysSince, daysUntil, formatINR, lineEstimatePaise, rupees } from '../utils/format';
 
 type Tab = 'projects' | 'vendors' | 'cashflow';
 
 export default function Reports() {
   const { can } = useAuth();
-  // Vendor performance and cash flow are vendor-side money. A landlord holds
+  // Vendor performance and cashPaise flow are vendor-side money. A landlord holds
   // reports:view for progress on their own build — never their contractor's
   // supplier ledger — so those tabs require the vendor-money pair.
   const money = can('vendors:view') && can('payments:view');
@@ -34,7 +34,7 @@ export default function Reports() {
     <div>
       <PageHeader
         title="Reports"
-        subtitle="Project health, vendor scorecards, cash flow"
+        subtitle="Project health, vendor scorecards, cashPaise flow"
         action={
           <button
             type="button"
@@ -77,7 +77,7 @@ function ProjectSummary() {
       {state.projects.filter((p) => canReachProject(p.id)).map((p) => {
         const spent = projectSpend(p.id, state);
         const estimate = projectEstimate(p.id, state);
-        const budgetPct = p.budget > 0 ? (spent / p.budget) * 100 : 0;
+        const budgetPct = p.budgetPaise > 0 ? (spent / p.budgetPaise) * 100 : 0;
         const elapsed = Math.max(daysSince(p.startDate), 0);
         const total = elapsed + Math.max(daysUntil(p.endDate), 0);
         const timePct = total > 0 ? (elapsed / total) * 100 : 0;
@@ -90,7 +90,7 @@ function ProjectSummary() {
             vendor: v,
             spend: state.invoices
               .filter((i) => i.projectId === p.id && i.vendorId === v.id)
-              .reduce((s, i) => s + i.amount, 0),
+              .reduce((s, i) => s + i.amountPaise, 0),
           }))
           .filter((x) => x.spend > 0)
           .sort((a, b) => b.spend - a.spend)
@@ -98,8 +98,8 @@ function ProjectSummary() {
         const maxVendorSpend = vendorSpend[0]?.spend ?? 1;
         const overrunItems = !money ? [] : state.budgetItems.filter((b) => {
           if (b.projectId !== p.id) return false;
-          const est = b.quantity * b.unitRate;
-          return est > 0 && b.actualSpend - est > 0.1 * est;
+          const est = lineEstimatePaise(b.quantity, b.unitRatePaise);
+          return est > 0 && b.actualSpendPaise - est > 0.1 * est;
         });
         const scheduleRisk = timePct > completion + 15;
         return (
@@ -122,7 +122,7 @@ function ProjectSummary() {
                 {/* Twin progress meters */}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   {money && (
-                    <Meter label="Budget used" pct={budgetPct} detail={`${formatINR(spent)} of ${formatINR(p.budget)}`} />
+                    <Meter label="Budget used" pct={budgetPct} detail={`${formatINR(spent)} of ${formatINR(p.budgetPaise)}`} />
                   )}
                   <Meter
                     label="Timeline elapsed"
@@ -167,11 +167,11 @@ function ProjectSummary() {
                 ) : (
                   <ul className="mt-1.5 space-y-1.5 text-sm">
                     {overrunItems.map((b) => {
-                      const est = b.quantity * b.unitRate;
+                      const est = lineEstimatePaise(b.quantity, b.unitRatePaise);
                       return (
                         <li key={b.id} className="flex items-center gap-1.5 font-semibold text-red-700">
                           <TrendingDown size={15} aria-hidden="true" />
-                          {b.description} +{formatINR(b.actualSpend - est)} over estimate
+                          {b.description} +{formatINR(b.actualSpendPaise - est)} over estimate
                         </li>
                       );
                     })}
@@ -224,7 +224,7 @@ function VendorPerformance() {
         );
         const paid = invoices.filter((i) => i.status === 'paid');
         const onTime = paid.filter((i) => i.paymentDate !== null && i.paymentDate <= i.dueDate);
-        const totalSpend = invoices.reduce((s, i) => s + i.amount, 0);
+        const totalSpend = invoices.reduce((s, i) => s + i.amountPaise, 0);
         const usage = creditUsagePercent(v, state.invoices) * 100;
         const overall = (v.ratingQuality + v.ratingDelivery) / 2;
         return { vendor: v, invoices, paid, onTime, totalSpend, usage, overall };
@@ -334,11 +334,11 @@ function CashFlow() {
       const byVendor = new Map<string, number>();
       for (const i of due) {
         const name = state.vendors.find((v) => v.id === i.vendorId)?.name ?? 'Unknown';
-        byVendor.set(name, (byVendor.get(name) ?? 0) + i.amount);
+        byVendor.set(name, (byVendor.get(name) ?? 0) + i.amountPaise);
       }
       out.push({
         label: `Week ${w + 1}`,
-        total: due.reduce((s, i) => s + i.amount, 0),
+        total: due.reduce((s, i) => s + i.amountPaise, 0),
         parts: [...byVendor.entries()].map(([n, a]) => `${n} ${formatINR(a)}`),
       });
     }
@@ -347,10 +347,10 @@ function CashFlow() {
 
   const totalDue = weeks.reduce((s, w) => s + w.total, 0);
   const maxWeek = Math.max(...weeks.map((w) => w.total), 1);
-  const cash = 20_00_000;
+  const cashPaise = rupees(20_00_000);
   const overrunPrediction = state.budgetItems.reduce((s, b) => {
-    const est = b.quantity * b.unitRate;
-    const variance = b.actualSpend - est;
+    const est = lineEstimatePaise(b.quantity, b.unitRatePaise);
+    const variance = b.actualSpendPaise - est;
     return est > 0 && variance > 0.1 * est ? s + variance * 2.5 : s;
   }, 0);
   const totalUsed = state.vendors.reduce((s, v) => s + creditUsed(v.id, state.invoices), 0);
@@ -360,9 +360,9 @@ function CashFlow() {
     <div className="animate-fade-up space-y-4">
       {/* Headline metrics */}
       <div className="stagger grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <MetricTile label="Payables (30 days)" value={formatINR(Math.round(animatedDue))} warn={totalDue > cash} />
-        <MetricTile label="Cash on hand" value={formatINR(cash)} />
-        <MetricTile label="Cash after payables" value={formatINR(cash - totalDue)} warn={cash - totalDue < 0} />
+        <MetricTile label="Payables (30 days)" value={formatINR(Math.round(animatedDue))} warn={totalDue > cashPaise} />
+        <MetricTile label="Cash on hand" value={formatINR(cashPaise)} />
+        <MetricTile label="Cash after payables" value={formatINR(cashPaise - totalDue)} warn={cashPaise - totalDue < 0} />
         <MetricTile
           label="Predicted overrun"
           value={overrunPrediction > 0 ? `+${formatINR(overrunPrediction)}` : '—'}
@@ -383,7 +383,7 @@ function CashFlow() {
               <div
                 className={clsx(
                   'w-full max-w-[72px] origin-bottom animate-bar-grow rounded-t-xl',
-                  w.total > cash
+                  w.total > cashPaise
                     ? 'bg-gradient-to-t from-red-600 to-red-400'
                     : 'bg-gradient-to-t from-ink to-ink-600',
                 )}

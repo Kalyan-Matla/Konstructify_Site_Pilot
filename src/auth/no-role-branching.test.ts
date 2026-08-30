@@ -39,3 +39,32 @@ describe('no role-string branching outside the authz kernel', () => {
     expect(offenders).toEqual([]);
   });
 });
+
+/**
+ * Money is integer paise (AD-06), and the unit lives in the field NAME.
+ * A raw `toLocaleString` on a paise value prints it with a rupee sign and
+ * no conversion — ₹3L silently renders as ₹3,00,00,000. That exact bug
+ * shipped during the migration and was caught in the browser, not by the
+ * compiler, because both sides are just `number`. This is the tripwire.
+ */
+describe('money is never formatted by hand', () => {
+  test('paise values go through formatINR, never toLocaleString', async () => {
+    const root = join(import.meta.dir, '..', '..');
+    const glob = new Glob('src/**/*.{ts,tsx}');
+    const offenders: string[] = [];
+
+    for await (const rel of glob.scan({ cwd: root })) {
+      const path = rel.replaceAll('\\', '/');
+      // money.ts is where the one legitimate call lives — it is the formatter.
+      if (path === 'src/utils/money.ts' || path.includes('.test.')) continue;
+
+      readFileSync(join(root, path), 'utf8').split('\n').forEach((line, i) => {
+        if (/toLocaleString/.test(line.replace(/\/\/.*$/, ''))) {
+          offenders.push(`${path}:${i + 1} → ${line.trim()}`);
+        }
+      });
+    }
+
+    expect(offenders).toEqual([]);
+  });
+});

@@ -17,9 +17,9 @@ import {
   totalPayablesDueWithin,
   vendorHasOverdue,
 } from '../utils/derive';
-import { daysSince, daysUntil, formatINR } from '../utils/format';
+import { daysSince, daysUntil, formatINR, rupees } from '../utils/format';
 
-const CASH_ON_HAND = 20_00_000; // mock treasury balance
+const CASH_ON_HAND_PAISE = rupees(20_00_000); // mock treasury balance
 
 interface Alert {
   id: string;
@@ -62,7 +62,7 @@ export default function Dashboard() {
   const payables30 = totalPayablesDueWithin(30, visibleInvoices);
   const payables7 = totalPayablesDueWithin(7, visibleInvoices);
   const overrunProjects = visibleProjects.filter(
-    (p) => projectSpend(p.id, state) > p.budget,
+    (p) => projectSpend(p.id, state) > p.budgetPaise,
   ).length;
   const activeProjects = visibleProjects.filter((p) => p.status === 'in-progress').length;
 
@@ -75,7 +75,7 @@ export default function Dashboard() {
           out.push({
             id: `overdue-${i.id}`,
             tone: 'red',
-            message: `Invoice ${i.invoiceNumber} (${v?.name ?? 'vendor'}, ${formatINR(i.amount)}) is ${daysSince(i.dueDate)} days overdue`,
+            message: `Invoice ${i.invoiceNumber} (${v?.name ?? 'vendor'}, ${formatINR(i.amountPaise)}) is ${daysSince(i.dueDate)} days overdue`,
           });
         }
       }
@@ -102,7 +102,7 @@ export default function Dashboard() {
           out.push({
             id: `due-${i.id}`,
             tone: 'orange',
-            message: `Payment of ${formatINR(i.amount)} to ${v?.name ?? 'vendor'} due ${d === 0 ? 'today' : `in ${d} day${d === 1 ? '' : 's'}`}`,
+            message: `Payment of ${formatINR(i.amountPaise)} to ${v?.name ?? 'vendor'} due ${d === 0 ? 'today' : `in ${d} day${d === 1 ? '' : 's'}`}`,
           });
         }
       }
@@ -162,7 +162,7 @@ export default function Dashboard() {
         {seeVendorMoney && (
           <StatCard
             label="Available cash"
-            rupees={Math.max(CASH_ON_HAND - payables7, 0)}
+            rupees={Math.max(CASH_ON_HAND_PAISE - payables7, 0)}
             sub="after this week's dues"
             subTone="text-ink/50"
           />
@@ -233,8 +233,8 @@ export default function Dashboard() {
       <div className="stagger mb-8 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
         {visibleProjects.map((p) => {
           const spent = projectSpend(p.id, state);
-          const pct = p.budget > 0 ? (spent / p.budget) * 100 : 0;
-          const over = spent > p.budget;
+          const pct = p.budgetPaise > 0 ? (spent / p.budgetPaise) * 100 : 0;
+          const over = spent > p.budgetPaise;
           const remaining = daysUntil(p.endDate);
           return (
             <Link
@@ -251,7 +251,7 @@ export default function Dashboard() {
                 </Badge>
               </div>
               <p className="num mt-2 text-sm text-ink/60">
-                {formatINR(spent)} <span className="text-ink/35">of</span> {formatINR(p.budget)}
+                {formatINR(spent)} <span className="text-ink/35">of</span> {formatINR(p.budgetPaise)}
               </p>
               <div className="mt-2.5">
                 <ProgressBar percent={pct} />
@@ -295,7 +295,7 @@ export default function Dashboard() {
                     </td>
                     <td className="px-4 py-3 capitalize text-ink/55">{v.category}</td>
                     <td className="num px-4 py-3 text-right text-ink">
-                      {formatINR(used)} / {formatINR(v.creditLimit)}
+                      {formatINR(used)} / {formatINR(v.creditLimitPaise)}
                     </td>
                     <td className="num px-4 py-3 text-right text-ink/55">{formatINR(aging.b0to30)}</td>
                     <td className="num px-4 py-3 text-right text-ink/55">{formatINR(aging.b30to60)}</td>

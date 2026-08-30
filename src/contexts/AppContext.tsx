@@ -25,7 +25,11 @@ import { buildMockState } from '../utils/mock-data';
 import { uid } from '../utils/format';
 import { useToast } from './ToastContext';
 
-const STORAGE_KEY = 'konstructify-state-v1';
+// v2: money moved from rupee floats to integer paise (AD-06). The key is
+// versioned because v1 data would be silently reinterpreted as paise —
+// every amount would read as 1/100th of its true value. A bump discards it
+// and reseeds, which is correct for mock data and non-negotiable for real.
+const STORAGE_KEY = 'konstructify-state-v2';
 
 export type Entity = Project | Vendor | Invoice | WorkTask | WorkOrder | BudgetItem;
 

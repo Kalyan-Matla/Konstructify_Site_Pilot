@@ -1,20 +1,21 @@
 import type { AppState, Invoice, Vendor } from '../types';
 import { daysSince } from './format';
+import { lineEstimatePaise } from './money';
 
 /** Credit used = every invoice not yet fully settled (unpaid + payment-sent). */
 export function creditUsed(vendorId: string, invoices: Invoice[]): number {
   return invoices
     .filter((i) => i.vendorId === vendorId && i.status !== 'paid')
-    .reduce((sum, i) => sum + i.amount, 0);
+    .reduce((sum, i) => sum + i.amountPaise, 0);
 }
 
 export function creditAvailable(vendor: Vendor, invoices: Invoice[]): number {
-  return vendor.creditLimit - creditUsed(vendor.id, invoices);
+  return vendor.creditLimitPaise - creditUsed(vendor.id, invoices);
 }
 
 export function creditUsagePercent(vendor: Vendor, invoices: Invoice[]): number {
-  if (vendor.creditLimit <= 0) return 0;
-  return creditUsed(vendor.id, invoices) / vendor.creditLimit;
+  if (vendor.creditLimitPaise <= 0) return 0;
+  return creditUsed(vendor.id, invoices) / vendor.creditLimitPaise;
 }
 
 export type CreditHealth = 'healthy' | 'warning' | 'high' | 'maxed';
@@ -40,10 +41,10 @@ export function agingBuckets(vendorId: string, invoices: Invoice[]): AgingBucket
   for (const i of invoices) {
     if (i.vendorId !== vendorId || i.status === 'paid') continue;
     const age = daysSince(i.invoiceDate);
-    if (age < 30) buckets.b0to30 += i.amount;
-    else if (age < 60) buckets.b30to60 += i.amount;
-    else if (age < 90) buckets.b60to90 += i.amount;
-    else buckets.b90plus += i.amount;
+    if (age < 30) buckets.b0to30 += i.amountPaise;
+    else if (age < 60) buckets.b30to60 += i.amountPaise;
+    else if (age < 90) buckets.b60to90 += i.amountPaise;
+    else buckets.b90plus += i.amountPaise;
   }
   return buckets;
 }
@@ -51,13 +52,13 @@ export function agingBuckets(vendorId: string, invoices: Invoice[]): AgingBucket
 export function projectSpend(projectId: string, state: AppState): number {
   return state.budgetItems
     .filter((b) => b.projectId === projectId)
-    .reduce((sum, b) => sum + b.actualSpend, 0);
+    .reduce((sum, b) => sum + b.actualSpendPaise, 0);
 }
 
 export function projectEstimate(projectId: string, state: AppState): number {
   return state.budgetItems
     .filter((b) => b.projectId === projectId)
-    .reduce((sum, b) => sum + b.quantity * b.unitRate, 0);
+    .reduce((sum, b) => sum + lineEstimatePaise(b.quantity, b.unitRatePaise), 0);
 }
 
 export function vendorHasOverdue(vendorId: string, invoices: Invoice[]): boolean {
@@ -73,5 +74,5 @@ export function totalPayablesDueWithin(days: number, invoices: Invoice[]): numbe
       const until = -daysSince(i.dueDate);
       return until <= days;
     })
-    .reduce((sum, i) => sum + i.amount, 0);
+    .reduce((sum, i) => sum + i.amountPaise, 0);
 }

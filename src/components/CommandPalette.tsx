@@ -119,7 +119,7 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
       id: `vendor-${v.id}`,
       group: 'Vendors',
       label: v.name,
-      hint: `${formatINR(creditUsed(v.id, state.invoices))} / ${formatINR(v.creditLimit)} used`,
+      hint: `${formatINR(creditUsed(v.id, state.invoices))} / ${formatINR(v.creditLimitPaise)} used`,
       icon: Users,
       run: () => go('/vendors', { openView: v.id }),
     }));
@@ -145,7 +145,7 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
         id: `invoice-${i.id}`,
         group: 'Invoices',
         label: `${i.invoiceNumber} — ${vendor?.name ?? 'vendor'}`,
-        hint: `${formatINR(i.amount)} · ${i.status}`,
+        hint: `${formatINR(i.amountPaise)} · ${i.status}`,
         icon: CreditCard,
         run: () => go('/payments'),
       };

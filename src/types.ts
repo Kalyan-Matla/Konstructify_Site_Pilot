@@ -1,3 +1,5 @@
+import type { Paise } from './utils/money';
+
 export type ProjectStatus = 'in-progress' | 'on-hold' | 'completed';
 
 export interface Project {
@@ -5,7 +7,7 @@ export interface Project {
   name: string;
   location: string;
   clientName: string;
-  budget: number;
+  budgetPaise: Paise;
   startDate: string; // ISO date
   endDate: string; // ISO date
   status: ProjectStatus;
@@ -23,7 +25,7 @@ export interface Vendor {
   gstId: string;
   bankAccount: string;
   bankIfsc: string;
-  creditLimit: number;
+  creditLimitPaise: Paise;
   paymentTerms: PaymentTerms;
   ratingQuality: number; // 1–5
   ratingDelivery: number; // 1–5
@@ -39,7 +41,7 @@ export interface Invoice {
   invoiceNumber: string;
   invoiceDate: string; // ISO date
   dueDate: string; // ISO date
-  amount: number;
+  amountPaise: Paise;
   status: InvoiceStatus;
   paymentMode: PaymentMode | null;
   paymentDate: string | null;
@@ -86,10 +88,11 @@ export interface BudgetItem {
   id: string;
   projectId: string;
   description: string;
+  /** Measured quantity — a real decimal (200.5 m³), never money. */
   quantity: number;
   unit: string;
-  unitRate: number;
-  actualSpend: number;
+  unitRatePaise: Paise;
+  actualSpendPaise: Paise;
 }
 
 export interface ActivityItem {

@@ -17,7 +17,7 @@ import {
 } from '../components/ui';
 import { creditAvailable, creditUsagePercent } from '../utils/derive';
 import { suggestPayment } from '../utils/ai-suggestions';
-import { daysSince, daysUntil, formatDate, formatINR, todayISO, uid } from '../utils/format';
+import { daysSince, daysUntil, formatDate, formatINR, parseRupeeInput, todayISO, uid } from '../utils/format';
 import { useRouteAction } from '../hooks/useRouteAction';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -94,7 +94,7 @@ export default function Payments() {
     upsert(
       'invoice',
       { ...i, status: 'paid', paymentDate: todayISO() },
-      `Invoice ${i.invoiceNumber} marked paid — ${formatINR(i.amount)} credit freed for ${v?.name ?? 'vendor'}`,
+      `Invoice ${i.invoiceNumber} marked paid — ${formatINR(i.amountPaise)} credit freed for ${v?.name ?? 'vendor'}`,
     );
   };
 
@@ -113,7 +113,7 @@ export default function Payments() {
   // paid individually while still selected (e.g. via its own row action) —
   // re-filter by status here so a stale selection can't re-schedule it.
   const selectedInvoices = state.invoices.filter((i) => selected.has(i.id) && i.status === 'unpaid');
-  const selectedTotal = selectedInvoices.reduce((s, i) => s + i.amount, 0);
+  const selectedTotal = selectedInvoices.reduce((s, i) => s + i.amountPaise, 0);
 
   return (
     <div>
@@ -228,7 +228,7 @@ export default function Payments() {
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-base font-bold text-ink">{formatINR(i.amount)}</span>
+                    <span className="text-base font-bold text-ink">{formatINR(i.amountPaise)}</span>
                     {statusBadge(i)}
                   </div>
                 </div>
@@ -290,7 +290,7 @@ export default function Payments() {
       {deleting && (
         <ConfirmDialog
           title="Delete invoice?"
-          message={`Invoice ${deleting.invoiceNumber} (${formatINR(deleting.amount)}) will be removed and the vendor's credit freed.`}
+          message={`Invoice ${deleting.invoiceNumber} (${formatINR(deleting.amountPaise)}) will be removed and the vendor's credit freed.`}
           confirmLabel="Delete"
           onCancel={() => setDeleting(null)}
           onConfirm={() => {
@@ -317,7 +317,8 @@ function InvoiceForm({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState('');
 
   const vendor = state.vendors.find((v) => v.id === vendorId);
-  const amt = Number(amount) || 0;
+  // Typed in rupees, compared and stored in paise.
+  const amt = parseRupeeInput(amount) ?? 0;
   const available = vendor ? creditAvailable(vendor, state.invoices) : 0;
   const exceeds = vendor !== undefined && amt > available;
   const alternative =
@@ -339,7 +340,7 @@ function InvoiceForm({ onClose }: { onClose: () => void }) {
     e.preventDefault();
     if (!vendor) return setError('Select a vendor.');
     if (!invoiceNumber.trim()) return setError('Invoice number is required.');
-    if (!Number.isFinite(amt) || amt <= 0) return setError('Amount must be greater than 0.');
+    if (amt <= 0) return setError('Amount must be greater than 0.');
     const invoice: Invoice = {
       id: uid('i'),
       vendorId,
@@ -347,7 +348,7 @@ function InvoiceForm({ onClose }: { onClose: () => void }) {
       invoiceNumber: invoiceNumber.trim(),
       invoiceDate,
       dueDate,
-      amount: amt,
+      amountPaise: amt,
       status: 'unpaid',
       paymentMode: null,
       paymentDate: null,
@@ -436,7 +437,7 @@ function PaymentModal({ invoice, onClose }: { invoice: Invoice; onClose: () => v
     upsert(
       'invoice',
       { ...invoice, status: 'payment-sent', paymentMode: mode, paymentDate: payOn },
-      `Payment of ${formatINR(invoice.amount)} scheduled to ${vendor?.name ?? 'vendor'} via ${mode}`,
+      `Payment of ${formatINR(invoice.amountPaise)} scheduled to ${vendor?.name ?? 'vendor'} via ${mode}`,
     );
     onClose();
   };
@@ -451,7 +452,7 @@ function PaymentModal({ invoice, onClose }: { invoice: Invoice; onClose: () => v
     <Modal title={`Pay invoice ${invoice.invoiceNumber}`} onClose={onClose}>
       <form onSubmit={schedule}>
         <p className="text-sm text-ink/80">
-          <strong>{vendor?.name}</strong> · {formatINR(invoice.amount)} · due {formatDate(invoice.dueDate)}
+          <strong>{vendor?.name}</strong> · {formatINR(invoice.amountPaise)} · due {formatDate(invoice.dueDate)}
         </p>
         <fieldset className="mt-4">
           <legend className="mb-2 text-sm font-medium text-ink/80">Payment mode</legend>
@@ -501,7 +502,7 @@ function BulkPayModal({
   const { toast } = useToast();
   const [mode, setMode] = useState<PaymentMode>('NEFT');
   const [payOn, setPayOn] = useState(todayISO());
-  const total = invoices.reduce((s, i) => s + i.amount, 0);
+  const total = invoices.reduce((s, i) => s + i.amountPaise, 0);
 
   const modes: Array<{ value: PaymentMode; label: string; hint: string }> = [
     { value: 'NEFT', label: 'NEFT', hint: 'Settles in 2–4 hrs' },
@@ -516,7 +517,7 @@ function BulkPayModal({
       upsert(
         'invoice',
         { ...invoice, status: 'payment-sent', paymentMode: mode, paymentDate: payOn },
-        `Payment of ${formatINR(invoice.amount)} scheduled to ${vendor?.name ?? 'vendor'} via ${mode}`,
+        `Payment of ${formatINR(invoice.amountPaise)} scheduled to ${vendor?.name ?? 'vendor'} via ${mode}`,
         { silent: true },
       );
     }
@@ -535,7 +536,7 @@ function BulkPayModal({
             return (
               <li key={i.id} className="flex items-center justify-between text-ink/75">
                 <span className="truncate">{i.invoiceNumber} · {vendor?.name ?? 'Unknown vendor'}</span>
-                <span className="num shrink-0 pl-2 font-semibold text-ink">{formatINR(i.amount)}</span>
+                <span className="num shrink-0 pl-2 font-semibold text-ink">{formatINR(i.amountPaise)}</span>
               </li>
             );
           })}

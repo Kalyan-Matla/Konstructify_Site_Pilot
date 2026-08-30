@@ -18,7 +18,7 @@ import {
   inputCls,
 } from '../components/ui';
 import { suggestBudget } from '../utils/ai-suggestions';
-import { formatINR, uid } from '../utils/format';
+import { formatINR, lineEstimatePaise, parseRupeeInput, paiseToRupees, uid } from '../utils/format';
 import { useRouteAction } from '../hooks/useRouteAction';
 import { useBulkSelect } from '../hooks/useBulkSelect';
 import { useBulkDelete } from '../hooks/useBulkDelete';
@@ -43,8 +43,8 @@ export default function Budgeting() {
 
   const project = state.projects.find((p) => p.id === projectId);
   const items = state.budgetItems.filter((b) => b.projectId === projectId);
-  const totalEstimate = items.reduce((s, b) => s + b.quantity * b.unitRate, 0);
-  const totalActual = items.reduce((s, b) => s + b.actualSpend, 0);
+  const totalEstimate = items.reduce((s, b) => s + lineEstimatePaise(b.quantity, b.unitRatePaise), 0);
+  const totalActual = items.reduce((s, b) => s + b.actualSpendPaise, 0);
   const totalVariance = totalActual - totalEstimate;
   const ai = suggestBudget(projectId, state.budgetItems);
 
@@ -142,8 +142,8 @@ export default function Budgeting() {
             </thead>
             <tbody>
               {items.map((b) => {
-                const estimate = b.quantity * b.unitRate;
-                const variance = b.actualSpend - estimate;
+                const estimate = lineEstimatePaise(b.quantity, b.unitRatePaise);
+                const variance = b.actualSpendPaise - estimate;
                 const pct = estimate > 0 ? (variance / estimate) * 100 : 0;
                 const overrun = estimate > 0 && variance > 0.1 * estimate;
                 return (
@@ -165,11 +165,11 @@ export default function Budgeting() {
                       <SyncBadge entity="budgetItem" id={b.id} />
                     </td>
                     <td className="num px-4 py-2.5 text-right text-ink/60">{b.quantity} {b.unit}</td>
-                    <td className="num px-4 py-2.5 text-right text-ink/60">₹{b.unitRate.toLocaleString('en-IN')}</td>
+                    <td className="num px-4 py-2.5 text-right text-ink/60">{formatINR(b.unitRatePaise)}</td>
                     <td className="num px-4 py-2.5 text-right text-ink">{formatINR(estimate)}</td>
-                    <td className="num px-4 py-2.5 text-right text-ink">{formatINR(b.actualSpend)}</td>
+                    <td className="num px-4 py-2.5 text-right text-ink">{formatINR(b.actualSpendPaise)}</td>
                     <td className="px-4 py-2.5 text-right">
-                      {b.actualSpend === 0 ? (
+                      {b.actualSpendPaise === 0 ? (
                         <Badge tone="gray">not started</Badge>
                       ) : overrun ? (
                         <Badge tone="red">+{pct.toFixed(0)}% overrun</Badge>
@@ -264,25 +264,25 @@ function BudgetForm({
   const [description, setDescription] = useState(item?.description ?? '');
   const [quantity, setQuantity] = useState(item ? String(item.quantity) : '1');
   const [unit, setUnit] = useState(item?.unit ?? 'LS');
-  const [unitRate, setUnitRate] = useState(item ? String(item.unitRate) : '');
-  const [actualSpend, setActualSpend] = useState(item ? String(item.actualSpend) : '0');
+  const [unitRate, setUnitRate] = useState(item ? String(paiseToRupees(item.unitRatePaise)) : '');
+  const [actualSpend, setActualSpend] = useState(item ? String(paiseToRupees(item.actualSpendPaise)) : '0');
   const [error, setError] = useState('');
 
-  const qty = Number(quantity) || 0;
-  const rate = Number(unitRate) || 0;
+  const qty = Number(quantity) || 0;            // measured decimal, not money
+  const ratePaise = parseRupeeInput(unitRate) ?? 0;
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!description.trim()) return setError('Description is required.');
-    if (qty <= 0 || rate <= 0) return setError('Quantity and rate must be greater than 0.');
+    if (qty <= 0 || ratePaise <= 0) return setError('Quantity and rate must be greater than 0.');
     onSave({
       id: item?.id ?? uid('b'),
       projectId: item?.projectId ?? projectId,
       description: description.trim(),
       quantity: qty,
       unit,
-      unitRate: rate,
-      actualSpend: Math.max(Number(actualSpend) || 0, 0),
+      unitRatePaise: ratePaise,
+      actualSpendPaise: Math.max(parseRupeeInput(actualSpend) ?? 0, 0),
     });
   };
 
@@ -312,7 +312,7 @@ function BudgetForm({
           </Field>
         </div>
         <p className="mb-2 text-sm text-ink/60">
-          Total estimate: <strong>{formatINR(qty * rate)}</strong>
+          Total estimate: <strong>{formatINR(lineEstimatePaise(qty, ratePaise))}</strong>
         </p>
         <div className="mt-2 flex justify-end gap-2">
           <button type="button" onClick={onClose} className="btn-ghost">
