@@ -13,21 +13,31 @@ import type {
   ActivityItem,
   AppState,
   BudgetItem,
+  Drawing,
   EntityKind,
   Invoice,
   Project,
+  ProjectDocument,
+  ProjectPhoto,
   SyncQueueItem,
   Vendor,
   WorkOrder,
+  SopStepState,
   WorkTask,
+  Zone,
 } from '../types';
 import { buildMockState } from '../utils/mock-data';
 import { uid } from '../utils/format';
 import { useToast } from './ToastContext';
 
-const STORAGE_KEY = 'konstructify-state-v1';
+// v2: money moved from rupee floats to integer paise (AD-06). The key is
+// versioned because v1 data would be silently reinterpreted as paise —
+// every amount would read as 1/100th of its true value. A bump discards it
+// and reseeds, which is correct for mock data and non-negotiable for real.
+const STORAGE_KEY = 'konstructify-state-v2';
 
-export type Entity = Project | Vendor | Invoice | WorkTask | WorkOrder | BudgetItem;
+export type Entity =
+  | Project | Vendor | Invoice | WorkTask | WorkOrder | BudgetItem | ProjectPhoto | Zone | SopStepState | ProjectDocument | Drawing;
 
 const collectionOf: Record<EntityKind, keyof AppState> = {
   project: 'projects',
@@ -36,6 +46,11 @@ const collectionOf: Record<EntityKind, keyof AppState> = {
   task: 'tasks',
   workOrder: 'workOrders',
   budgetItem: 'budgetItems',
+  photo: 'photos',
+  zone: 'zones',
+  sopStep: 'sopSteps',
+  document: 'documents',
+  drawing: 'drawings',
 };
 
 type Action =
@@ -172,7 +187,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       });
       dispatch({
         type: 'activity',
-        item: { id: uid('act'), message: label, timestamp: new Date().toISOString() },
+        item: { id: uid('act'), message: label, timestamp: new Date().toISOString(), entity },
       });
     },
     [],

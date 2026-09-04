@@ -1,7 +1,8 @@
 import { useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { Camera, CheckCircle2, HardHat, Pencil, Plus, Trash2 } from 'lucide-react';
-import type { TaskPhoto, TaskStatus, WorkTask } from '../types';
+import type { TaskStatus, WorkTask } from '../types';
 import { useApp } from '../contexts/AppContext';
+import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import {
   AICard,
@@ -22,6 +23,7 @@ import {
 import { suggestWorkStatus } from '../utils/ai-suggestions';
 import { daysUntil, formatDate, isoDaysFromNow, todayISO, uid } from '../utils/format';
 import { useRouteAction } from '../hooks/useRouteAction';
+import { usePhotoUpload } from '../hooks/usePhotoUpload';
 import { useBulkSelect } from '../hooks/useBulkSelect';
 import { useBulkDelete } from '../hooks/useBulkDelete';
 
@@ -34,33 +36,12 @@ function progressTone(pct: number): string {
   return 'bg-red-500';
 }
 
-/** Resize an image file to ≤800px wide JPEG data URL (keeps localStorage small). */
-function resizeImage(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        const scale = Math.min(800 / img.width, 1);
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.round(img.width * scale);
-        canvas.height = Math.round(img.height * scale);
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return reject(new Error('canvas unsupported'));
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL('image/jpeg', 0.8));
-      };
-      img.onerror = () => reject(new Error('bad image'));
-      img.src = String(reader.result);
-    };
-    reader.onerror = () => reject(new Error('read failed'));
-    reader.readAsDataURL(file);
-  });
-}
-
 export default function WorkStatus() {
   const { state, upsert, remove } = useApp();
+  const { can, canReachProject } = useAuth();
   const { toast } = useToast();
+  const manage = can('work-status:manage');
+  const mayUpdate = can('work-status:update');
   const [filter, setFilter] = useState<Filter>('all');
   const [projectFilter, setProjectFilter] = useState('all');
   const [editing, setEditing] = useState<WorkTask | 'new' | null>(null);
@@ -70,14 +51,23 @@ export default function WorkStatus() {
   const { selected, toggle, clear, setAll } = useBulkSelect();
   const bulkDelete = useBulkDelete<WorkTask>('task', 'task');
 
-  useRouteAction({ openNew: () => setEditing('new'), openView: (id) => setViewing(id) });
+  useRouteAction({ openNew: () => { if (manage) setEditing('new'); }, openView: (id) => setViewing(id) });
 
+  // Layer 3 — only tasks on assigned projects.
   const tasks = state.tasks.filter(
     (t) =>
+      canReachProject(t.projectId) &&
       (filter === 'all' || t.status === filter) &&
       (projectFilter === 'all' || t.projectId === projectFilter),
   );
-  const viewingTask = viewing ? state.tasks.find((t) => t.id === viewing) ?? null : null;
+  const viewingTask = viewing
+    ? state.tasks.find((t) => t.id === viewing && canReachProject(t.projectId)) ?? null
+    : null;
+
+  /** Photos now live on the project, tagged with a taskId — so the same
+   *  photo appears in the task and in the project gallery (Block B). */
+  const photoCountFor = (taskId: string) =>
+    state.photos.filter((ph) => ph.taskId === taskId).length;
 
   const bulkMarkComplete = () => {
     const items = state.tasks.filter((t) => selected.has(t.id) && t.status !== 'complete');
@@ -95,13 +85,15 @@ export default function WorkStatus() {
         title="Work Status"
         subtitle="On-site progress, photos and completion tracking"
         action={
-          <button
-            type="button"
-            onClick={() => setEditing('new')}
-            className="btn-primary flex items-center gap-1.5"
-          >
-            <Plus size={16} aria-hidden="true" /> New task
-          </button>
+          manage ? (
+            <button
+              type="button"
+              onClick={() => setEditing('new')}
+              className="btn-primary flex items-center gap-1.5"
+            >
+              <Plus size={16} aria-hidden="true" /> New task
+            </button>
+          ) : undefined
         }
       />
 
@@ -126,13 +118,13 @@ export default function WorkStatus() {
           onChange={(e) => setProjectFilter(e.target.value)}
         >
           <option value="all">All projects</option>
-          {state.projects.map((p) => (
+          {state.projects.filter((p) => canReachProject(p.id)).map((p) => (
             <option key={p.id} value={p.id}>{p.name}</option>
           ))}
         </select>
       </div>
 
-      {tasks.length > 0 && (
+      {(manage || mayUpdate) && tasks.length > 0 && (
         <div className="mb-4 flex justify-end">
           <SelectAllToggle
             checked={tasks.every((t) => selected.has(t.id))}
@@ -143,16 +135,20 @@ export default function WorkStatus() {
       )}
 
       <BulkBar count={selected.size} itemLabel="task" onClear={clear}>
-        <button type="button" onClick={bulkMarkComplete} className="btn-success btn-sm flex items-center gap-1.5">
-          <CheckCircle2 size={14} aria-hidden="true" /> Mark complete
-        </button>
-        <button
-          type="button"
-          onClick={() => setBulkDeleting(true)}
-          className="flex items-center gap-1.5 rounded-xl bg-red-600 px-3 py-1.5 text-xs font-bold text-white transition-[transform,background-color] duration-200 ease-out hover:bg-red-500 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
-        >
-          <Trash2 size={14} aria-hidden="true" /> Delete
-        </button>
+        {mayUpdate && (
+          <button type="button" onClick={bulkMarkComplete} className="btn-success btn-sm flex items-center gap-1.5">
+            <CheckCircle2 size={14} aria-hidden="true" /> Mark complete
+          </button>
+        )}
+        {manage && (
+          <button
+            type="button"
+            onClick={() => setBulkDeleting(true)}
+            className="flex items-center gap-1.5 rounded-xl bg-red-600 px-3 py-1.5 text-xs font-bold text-white transition-[transform,background-color] duration-200 ease-out hover:bg-red-500 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+          >
+            <Trash2 size={14} aria-hidden="true" /> Delete
+          </button>
+        )}
       </BulkBar>
 
       {tasks.length === 0 ? (
@@ -160,7 +156,7 @@ export default function WorkStatus() {
           icon={HardHat}
           title="No tasks yet"
           message="Add a site task to track progress, capture photos and flag delays before they slip."
-          action={{ label: 'New task', onClick: () => setEditing('new') }}
+          action={manage ? { label: 'New task', onClick: () => setEditing('new') } : undefined}
         />
       ) : (
         <div className="stagger grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -173,11 +169,13 @@ export default function WorkStatus() {
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex min-w-0 items-start gap-2">
-                    <BulkCheckbox
-                      checked={selected.has(t.id)}
-                      onChange={() => toggle(t.id)}
-                      ariaLabel={`Select ${t.name} for bulk actions`}
-                    />
+                    {(manage || mayUpdate) && (
+                      <BulkCheckbox
+                        checked={selected.has(t.id)}
+                        onChange={() => toggle(t.id)}
+                        ariaLabel={`Select ${t.name} for bulk actions`}
+                      />
+                    )}
                     <button
                       type="button"
                       onClick={() => setViewing(t.id)}
@@ -195,7 +193,7 @@ export default function WorkStatus() {
                   )}
                 </div>
                 <p className="mt-0.5 text-xs text-ink/55">
-                  {t.phase} · {t.assignedTo} · {t.photos.length} photo{t.photos.length === 1 ? '' : 's'}
+                  {t.phase} · {t.assignedTo} · {photoCountFor(t.id)} photo{photoCountFor(t.id) === 1 ? '' : 's'}
                 </p>
                 <div className="mt-2 flex items-center gap-2">
                   <div className="flex-1">
@@ -207,12 +205,16 @@ export default function WorkStatus() {
                 <div className="mt-2 flex items-center justify-between">
                   <SyncBadge entity="task" id={t.id} />
                   <div className="flex gap-1">
-                    <button type="button" onClick={() => setEditing(t)} aria-label={`Edit ${t.name}`} className="rounded p-1.5 text-ink/55 hover:bg-paper-soft hover:text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
-                      <Pencil size={16} />
-                    </button>
-                    <button type="button" onClick={() => setDeleting(t)} aria-label={`Delete ${t.name}`} className="rounded p-1.5 text-ink/55 hover:bg-paper-soft hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
-                      <Trash2 size={16} />
-                    </button>
+                    {manage && (
+                      <>
+                        <button type="button" onClick={() => setEditing(t)} aria-label={`Edit ${t.name}`} className="rounded p-1.5 text-ink/55 hover:bg-paper-soft hover:text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                          <Pencil size={16} />
+                        </button>
+                        <button type="button" onClick={() => setDeleting(t)} aria-label={`Delete ${t.name}`} className="rounded p-1.5 text-ink/55 hover:bg-paper-soft hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                          <Trash2 size={16} />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -235,7 +237,7 @@ export default function WorkStatus() {
       {deleting && (
         <ConfirmDialog
           title="Delete task?"
-          message={`"${deleting.name}" and its ${deleting.photos.length} photo(s) will be removed.`}
+          message={`"${deleting.name}" will be removed. Its ${photoCountFor(deleting.id)} photo(s) stay in the project gallery.`}
           confirmLabel="Delete"
           onCancel={() => setDeleting(null)}
           onConfirm={() => {
@@ -273,12 +275,16 @@ function TaskForm({
   onSave: (t: WorkTask) => void;
 }) {
   const { state } = useApp();
+  const { canReachProject } = useAuth();
+  const projects = state.projects.filter((p) => canReachProject(p.id));
   const [name, setName] = useState(task?.name ?? '');
   const [description, setDescription] = useState(task?.description ?? '');
   const [assignedTo, setAssignedTo] = useState(task?.assignedTo ?? '');
   const [phase, setPhase] = useState(task?.phase ?? 'Foundation');
-  const [projectId, setProjectId] = useState(task?.projectId ?? state.projects[0]?.id ?? '');
+  const [projectId, setProjectId] = useState(task?.projectId ?? projects[0]?.id ?? '');
   const [dueDate, setDueDate] = useState(task?.dueDate ?? isoDaysFromNow(14));
+  const [zoneId, setZoneId] = useState(task?.zoneId ?? '');
+  const [budgetItemId, setBudgetItemId] = useState(task?.budgetItemId ?? '');
   const [error, setError] = useState('');
 
   const submit = (e: FormEvent) => {
@@ -294,7 +300,8 @@ function TaskForm({
       status: task?.status ?? 'pending',
       dueDate,
       percentComplete: task?.percentComplete ?? 0,
-      photos: task?.photos ?? [],
+      budgetItemId: budgetItemId || null,
+      zoneId: zoneId || null,
       createdAt: task?.createdAt ?? todayISO(),
     });
   };
@@ -322,13 +329,29 @@ function TaskForm({
           </Field>
           <Field label="Project" htmlFor="tk-project">
             <select id="tk-project" className={inputCls} value={projectId} onChange={(e) => setProjectId(e.target.value)}>
-              {state.projects.map((p) => (
+              {projects.map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>
           </Field>
           <Field label="Due date" htmlFor="tk-due">
             <input id="tk-due" type="date" className={inputCls} value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+          </Field>
+          <Field label="BOQ line" htmlFor="tk-boq">
+            <select id="tk-boq" className={inputCls} value={budgetItemId} onChange={(e) => setBudgetItemId(e.target.value)}>
+              <option value="">Not linked — excluded from weighted progress</option>
+              {state.budgetItems.filter((b) => b.projectId === projectId).map((b) => (
+                <option key={b.id} value={b.id}>{b.description}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Zone" htmlFor="tk-zone">
+            <select id="tk-zone" className={inputCls} value={zoneId} onChange={(e) => setZoneId(e.target.value)}>
+              <option value="">Not mapped to a zone</option>
+              {state.zones.filter((z) => z.projectId === projectId).map((z) => (
+                <option key={z.id} value={z.id}>{z.name}</option>
+              ))}
+            </select>
           </Field>
         </div>
         <div className="mt-4 flex justify-end gap-2">
@@ -345,12 +368,22 @@ function TaskForm({
 }
 
 function TaskDetail({ task, onClose }: { task: WorkTask; onClose: () => void }) {
-  const { state, upsert } = useApp();
+  const { state, upsert, remove } = useApp();
+  const { can } = useAuth();
+  const mayUpdate = can('work-status:update');
+  const mayAddPhoto = can('project-photos:add');
+  const mayDeletePhoto = can('project-photos:delete');
+  const photos = state.photos.filter((ph) => ph.taskId === task.id);
+  const { upload, error: uploadError } = usePhotoUpload({
+    projectId: task.projectId,
+    taskId: task.id,
+    zoneId: task.zoneId,
+    label: `"${task.name}"`,
+  });
   const fileRef = useRef<HTMLInputElement>(null);
   const [aiDismissed, setAiDismissed] = useState(false);
-  const [uploadError, setUploadError] = useState('');
   const project = state.projects.find((p) => p.id === task.projectId);
-  const ai = suggestWorkStatus(task);
+  const ai = suggestWorkStatus(task, photos.length);
   const overdue = task.status !== 'complete' && daysUntil(task.dueDate) < 0;
 
   const setPercent = (pct: number) => {
@@ -369,29 +402,12 @@ function TaskDetail({ task, onClose }: { task: WorkTask; onClose: () => void }) 
   const addPhoto = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    try {
-      const dataUrl = await resizeImage(file);
-      const photo: TaskPhoto = {
-        id: uid('ph'),
-        dataUrl,
-        caption: file.name,
-        timestamp: new Date().toISOString(),
-      };
-      upsert('task', { ...task, photos: [...task.photos, photo] }, `Photo added to "${task.name}"`);
-      setUploadError('');
-    } catch {
-      setUploadError('Could not read that image. Try a different file.');
-    } finally {
-      if (fileRef.current) fileRef.current.value = '';
-    }
+    await upload(file);
+    if (fileRef.current) fileRef.current.value = '';
   };
 
   const removePhoto = (photoId: string) => {
-    upsert(
-      'task',
-      { ...task, photos: task.photos.filter((p) => p.id !== photoId) },
-      `Photo removed from "${task.name}"`,
-    );
+    remove('photo', photoId, `Photo removed from "${task.name}"`);
   };
 
   return (
@@ -417,7 +433,8 @@ function TaskDetail({ task, onClose }: { task: WorkTask; onClose: () => void }) 
           step={5}
           value={task.percentComplete}
           onChange={(e) => setPercent(Number(e.target.value))}
-          className="w-full accent-amber-500"
+          disabled={!mayUpdate}
+          className="w-full accent-amber-500 disabled:cursor-not-allowed disabled:opacity-40"
         />
         <ProgressBar percent={task.percentComplete} tone={progressTone(task.percentComplete)} />
       </div>
@@ -429,43 +446,47 @@ function TaskDetail({ task, onClose }: { task: WorkTask; onClose: () => void }) 
       )}
 
       <div className="mt-4 flex items-center justify-between">
-        <h3 className="text-sm font-bold text-ink">Photos ({task.photos.length})</h3>
-        <div>
-          <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={addPhoto} aria-label="Upload site photo" />
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            className="btn-ghost btn-sm flex items-center gap-1.5"
-          >
-            <Camera size={14} aria-hidden="true" /> Add photo
-          </button>
-        </div>
+        <h3 className="text-sm font-bold text-ink">Photos ({photos.length})</h3>
+        {mayAddPhoto && (
+          <div>
+            <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={addPhoto} aria-label="Upload site photo" />
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              className="btn-ghost btn-sm flex items-center gap-1.5"
+            >
+              <Camera size={14} aria-hidden="true" /> Add photo
+            </button>
+          </div>
+        )}
       </div>
       {uploadError && <p role="alert" className="mt-1 text-xs text-red-600">{uploadError}</p>}
-      {task.photos.length === 0 ? (
+      {photos.length === 0 ? (
         <p className="mt-2 text-sm text-ink/55">No photos yet — capture progress from the site.</p>
       ) : (
         <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {task.photos.map((p) => (
+          {photos.map((p) => (
             <figure key={p.id} className="relative">
-              <img src={p.dataUrl} alt={p.caption || 'Site photo'} className="h-24 w-full rounded object-cover" />
+              <img src={p.src} alt={p.caption || 'Site photo'} className="h-24 w-full rounded object-cover" />
               <figcaption className="mt-0.5 truncate text-[10px] text-ink/55">
                 {formatDate(p.timestamp)}
               </figcaption>
-              <button
-                type="button"
-                onClick={() => removePhoto(p.id)}
-                aria-label="Delete photo"
-                className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white hover:bg-black/80 focus:outline-none focus:ring-2 focus:ring-amber-500"
-              >
-                <Trash2 size={12} />
-              </button>
+              {mayDeletePhoto && (
+                <button
+                  type="button"
+                  onClick={() => removePhoto(p.id)}
+                  aria-label="Delete photo"
+                  className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white hover:bg-black/80 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                >
+                  <Trash2 size={12} />
+                </button>
+              )}
             </figure>
           ))}
         </div>
       )}
 
-      {task.status !== 'complete' && (
+      {mayUpdate && task.status !== 'complete' && (
         <button
           type="button"
           onClick={() => {

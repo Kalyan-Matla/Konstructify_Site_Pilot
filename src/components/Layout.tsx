@@ -2,6 +2,8 @@ import { NavLink, Outlet } from 'react-router-dom';
 import {
   BarChart3,
   ClipboardList,
+  FileCheck,
+  Ruler,
   CreditCard,
   FolderOpen,
   HardHat,
@@ -9,6 +11,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  Repeat,
   RotateCcw,
   Search,
   Users,
@@ -16,40 +19,58 @@ import {
   Wifi,
   WifiOff,
   X,
+  type LucideIcon,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { useApp } from '../contexts/AppContext';
 import { useAuth } from '../contexts/AuthContext';
+import type { Capability } from '../auth/capabilities';
+import { PERSONA_LABELS } from '../auth/capabilities';
 import CommandPalette from './CommandPalette';
+import PersonaSwitcher from './PersonaSwitcher';
 
+/** Each destination declares the capability that unlocks it. Navigation is
+ *  derived from this — no screen is ever listed for someone who cannot open
+ *  it, and adding a persona never means editing a menu. */
 export const NAV = [
-  { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-  { name: 'Projects', path: '/projects', icon: FolderOpen },
-  { name: 'Vendors', path: '/vendors', icon: Users },
-  { name: 'Vendor Credits', path: '/credits', icon: Wallet },
-  { name: 'Work Status', path: '/work-status', icon: HardHat },
-  { name: 'Work Orders', path: '/work-orders', icon: ClipboardList },
-  { name: 'Budgeting', path: '/budgeting', icon: IndianRupee },
-  { name: 'Payments', path: '/payments', icon: CreditCard },
-  { name: 'Reports', path: '/reports', icon: BarChart3 },
-] as const;
+  { name: 'Dashboard', path: '/', icon: LayoutDashboard, capability: 'dashboard:view' },
+  { name: 'Projects', path: '/projects', icon: FolderOpen, capability: 'projects:view' },
+  { name: 'Vendors', path: '/vendors', icon: Users, capability: 'vendors:view' },
+  { name: 'Vendor Credits', path: '/credits', icon: Wallet, capability: 'credits:view' },
+  { name: 'Work Status', path: '/work-status', icon: HardHat, capability: 'work-status:view' },
+  { name: 'Work Orders', path: '/work-orders', icon: ClipboardList, capability: 'work-orders:view' },
+  { name: 'Budgeting', path: '/budgeting', icon: IndianRupee, capability: 'budgeting:view' },
+  { name: 'Payments', path: '/payments', icon: CreditCard, capability: 'payments:view' },
+  { name: 'Drawings', path: '/drawings', icon: Ruler, capability: 'drawings:view' },
+  { name: 'Approvals', path: '/approvals', icon: FileCheck, capability: 'sop:view' },
+  { name: 'Reports', path: '/reports', icon: BarChart3, capability: 'reports:view' },
+] as const satisfies ReadonlyArray<{
+  name: string;
+  path: string;
+  icon: LucideIcon;
+  capability: Capability;
+}>;
 
-const MOBILE_TABS = NAV.filter((n) =>
-  ['Dashboard', 'Projects', 'Vendors', 'Payments'].includes(n.name),
-);
-const MORE_TABS = NAV.filter(
-  (n) => !['Dashboard', 'Projects', 'Vendors', 'Payments'].includes(n.name),
-);
+export type NavItem = (typeof NAV)[number];
+
+const PRIMARY = ['Dashboard', 'Projects', 'Vendors', 'Payments'];
 
 export default function Layout() {
   const { isOnline, isSyncing, pendingCount, simulateOffline, setSimulateOffline, resetData } =
     useApp();
-  const { user, logout } = useAuth();
+  const { user, account, can, logout } = useAuth();
   const [moreOpen, setMoreOpen] = useState(false);
   const [userMenu, setUserMenu] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [switcherOpen, setSwitcherOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // Gate 4 — usability only. The screens themselves re-check, and in Phase 2
+  // the data behind them never reaches the device unless sync rules allow it.
+  const nav = useMemo(() => NAV.filter((n) => can(n.capability)), [can]);
+  const mobileTabs = nav.filter((n) => PRIMARY.includes(n.name));
+  const moreTabs = nav.filter((n) => !PRIMARY.includes(n.name));
 
   useEffect(() => {
     if (!userMenu) return;
@@ -146,9 +167,24 @@ export default function Layout() {
                   >
                     <div className="border-b border-ink/10 px-4 py-3">
                       <p className="text-sm font-bold text-ink">{user.name}</p>
-                      <p className="text-xs text-ink/50">{user.role}</p>
+                      <p className="text-xs text-ink/50">
+                        {PERSONA_LABELS[user.persona]}
+                        {account && ` · ${account.name}`}
+                      </p>
                       <p className="num mt-0.5 truncate text-[11px] text-ink/40">{user.email}</p>
                     </div>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setUserMenu(false);
+                        setSwitcherOpen(true);
+                      }}
+                      className="flex w-full cursor-pointer items-center gap-2.5 border-b border-ink/10 px-4 py-3 text-sm font-semibold text-ink/75 transition-colors hover:bg-paper-soft hover:text-amber-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-amber-500"
+                    >
+                      <Repeat size={16} aria-hidden="true" />
+                      Switch persona
+                    </button>
                     <button
                       type="button"
                       role="menuitem"
@@ -179,7 +215,7 @@ export default function Layout() {
           className="no-print my-5 ml-4 hidden w-60 shrink-0 self-start rounded-3xl border border-ink/10 bg-white shadow-raise md:block"
         >
           <ul className="sticky top-20 space-y-0.5 p-3">
-            {NAV.map((item) => (
+            {nav.map((item) => (
               <li key={item.path}>
                 <NavLink
                   to={item.path}
@@ -240,7 +276,7 @@ export default function Layout() {
         className="no-print fixed bottom-3 left-3 right-3 z-40 rounded-2xl bg-ink/95 shadow-lift backdrop-blur-xl md:hidden"
       >
         <div className="flex justify-around">
-          {MOBILE_TABS.map((tab) => (
+          {mobileTabs.map((tab) => (
             <NavLink
               key={tab.path}
               to={tab.path}
@@ -309,7 +345,7 @@ export default function Layout() {
               </button>
             </div>
             <ul className="stagger space-y-1">
-              {MORE_TABS.map((item) => (
+              {moreTabs.map((item) => (
                 <li key={item.path}>
                   <NavLink
                     to={item.path}
@@ -345,6 +381,7 @@ export default function Layout() {
       )}
 
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+      {switcherOpen && <PersonaSwitcher onClose={() => setSwitcherOpen(false)} />}
     </div>
   );
 }

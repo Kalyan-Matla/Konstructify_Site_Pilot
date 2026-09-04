@@ -1,7 +1,15 @@
 import { useState, type FormEvent } from 'react';
 import { ArrowLeft, ArrowRight, Eye, EyeOff, HardHat, Wifi } from 'lucide-react';
-import { DEMO_ACCOUNTS, DEMO_PASSWORD, useAuth } from '../contexts/AuthContext';
+import { DEMO_PASSWORD, useAuth } from '../contexts/AuthContext';
+import { PERSONA_LABELS, PROJECT_SCOPED_PERSONAS } from '../auth/capabilities';
+import { ACCOUNTS, USERS } from '../auth/seed';
 import { inputCls } from '../components/ui';
+
+/** The five personas of Account 1 — the brief's own worked example, and the
+ *  quickest way to see the permission model differ screen by screen. Every
+ *  other seeded account is reachable from "Switch persona" once inside. */
+const QUICK_SIGN_IN = USERS.filter((u) => u.accountId === 'acc-1');
+const ACCOUNT_1 = ACCOUNTS.find((a) => a.id === 'acc-1');
 
 /** Hand-authored blueprint site scene — no external assets. */
 export function SiteScene() {
@@ -183,28 +191,39 @@ export default function Login({ onBack }: { onBack?: () => void }) {
 
           {/* Demo accounts */}
           <div className="mt-7">
-            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink/60">
-              Demo accounts · password{' '}
+            <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink/60">
+              {ACCOUNT_1?.name ?? 'Demo account'} · password{' '}
               <code className="num rounded bg-ink/[0.06] px-1.5 py-0.5 text-ink/70">{DEMO_PASSWORD}</code>
             </p>
+            <p className="mb-2.5 text-xs text-ink/50">
+              All five personas of one account. Each sees a different app — switch between them,
+              and between other accounts, once you're inside.
+            </p>
             <div className="space-y-2">
-              {DEMO_ACCOUNTS.map((a) => (
+              {QUICK_SIGN_IN.map((u) => (
                 <button
-                  key={a.email}
+                  key={u.email}
                   type="button"
-                  onClick={() => fill(a.email)}
+                  onClick={() => fill(u.email)}
                   className="panel panel-hover group flex w-full cursor-pointer items-center justify-between gap-3 p-3 text-left focus:outline-none focus:ring-2 focus:ring-amber-500"
                 >
-                  <span className="flex items-center gap-3">
+                  <span className="flex min-w-0 items-center gap-3">
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-ink text-xs font-bold text-amber-glow">
-                      {a.name.split(' ').map((w) => w[0]).join('').slice(0, 2)}
+                      {u.name.split(' ').map((w) => w[0]).join('').slice(0, 2)}
                     </span>
-                    <span>
-                      <span className="block text-sm font-semibold text-ink">{a.role}</span>
-                      <span className="block text-xs text-ink/50">{a.blurb}</span>
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold text-ink">
+                        {PERSONA_LABELS[u.persona]}
+                      </span>
+                      <span className="block truncate text-xs text-ink/50">
+                        {u.name} ·{' '}
+                        {PROJECT_SCOPED_PERSONAS.has(u.persona)
+                          ? `${u.projectIds.length} project${u.projectIds.length === 1 ? '' : 's'}`
+                          : 'all projects'}
+                      </span>
                     </span>
                   </span>
-                  <span className="text-xs font-bold uppercase tracking-wide text-amber-700 opacity-0 transition-opacity group-hover:opacity-100">
+                  <span className="shrink-0 text-xs font-bold uppercase tracking-wide text-amber-700 opacity-0 transition-opacity group-hover:opacity-100">
                     Fill →
                   </span>
                 </button>

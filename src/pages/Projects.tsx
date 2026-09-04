@@ -1,7 +1,8 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { FolderOpen, Pencil, Plus, Trash2 } from 'lucide-react';
-import type { Project, ProjectStatus } from '../types';
+import type { Jurisdiction, Project, ProjectStatus, ProjectType } from '../types';
 import { useApp } from '../contexts/AppContext';
+import { useAuth } from '../contexts/AuthContext';
 import { useRouteAction } from '../hooks/useRouteAction';
 import { useBulkSelect } from '../hooks/useBulkSelect';
 import { useBulkDelete } from '../hooks/useBulkDelete';
@@ -20,8 +21,9 @@ import {
   SyncBadge,
   inputCls,
 } from '../components/ui';
-import { creditUsed, projectEstimate, projectSpend } from '../utils/derive';
-import { daysUntil, formatDate, formatINR, todayISO, uid, isoDaysFromNow } from '../utils/format';
+import { creditUsed, projectEstimate, projectProgress, projectSpend } from '../utils/derive';
+import PhotoGallery from '../components/PhotoGallery';
+import { daysUntil, formatDate, formatINR, paiseToRupees, parseRupeeInput, todayISO, uid, isoDaysFromNow } from '../utils/format';
 
 type Filter = 'all' | ProjectStatus;
 
@@ -29,6 +31,8 @@ const PHASES = ['Foundation', 'Structure', 'MEP', 'Finishing'];
 
 export default function Projects() {
   const { state, upsert, remove } = useApp();
+  const { can, canReachProject } = useAuth();
+  const manage = can('projects:manage');
   const [filter, setFilter] = useState<Filter>('all');
   const [editing, setEditing] = useState<Project | 'new' | null>(null);
   const [viewing, setViewing] = useState<Project | null>(null);
@@ -38,14 +42,17 @@ export default function Projects() {
   const bulkDelete = useBulkDelete<Project>('project', 'project');
 
   useRouteAction({
-    openNew: () => setEditing('new'),
+    openNew: () => { if (manage) setEditing('new'); },
     openView: (id) => {
       const p = state.projects.find((x) => x.id === id);
-      if (p) setViewing(p);
+      if (p && canReachProject(p.id)) setViewing(p);
     },
   });
 
-  const projects = state.projects.filter((p) => filter === 'all' || p.status === filter);
+  // Layer 3 — scoped personas see only their assigned projects.
+  const projects = state.projects.filter(
+    (p) => canReachProject(p.id) && (filter === 'all' || p.status === filter),
+  );
 
   return (
     <div>
@@ -53,13 +60,15 @@ export default function Projects() {
         title="Projects"
         subtitle={`${state.projects.length} total`}
         action={
-          <button
-            type="button"
-            onClick={() => setEditing('new')}
-            className="btn-primary flex items-center gap-1.5"
-          >
-            <Plus size={16} aria-hidden="true" /> New project
-          </button>
+          manage ? (
+            <button
+              type="button"
+              onClick={() => setEditing('new')}
+              className="btn-primary flex items-center gap-1.5"
+            >
+              <Plus size={16} aria-hidden="true" /> New project
+            </button>
+          ) : undefined
         }
       />
 
@@ -79,7 +88,7 @@ export default function Projects() {
             </button>
           ))}
         </div>
-        {projects.length > 0 && (
+        {manage && projects.length > 0 && (
           <SelectAllToggle
             checked={projects.every((p) => selected.has(p.id))}
             onChange={() =>
@@ -105,13 +114,13 @@ export default function Projects() {
           icon={FolderOpen}
           title="No projects to show"
           message="Spin up a project with its budget and timeline to start tracking spend and progress."
-          action={{ label: 'New project', onClick: () => setEditing('new') }}
+          action={manage ? { label: 'New project', onClick: () => setEditing('new') } : undefined}
         />
       ) : (
         <div className="stagger grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {projects.map((p) => {
             const spent = projectSpend(p.id, state);
-            const over = spent > p.budget;
+            const over = spent > p.budgetPaise;
             const remaining = daysUntil(p.endDate);
             return (
               <div
@@ -120,11 +129,13 @@ export default function Projects() {
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex min-w-0 items-start gap-2">
-                    <BulkCheckbox
-                      checked={selected.has(p.id)}
-                      onChange={() => toggle(p.id)}
-                      ariaLabel={`Select ${p.name} for bulk actions`}
-                    />
+                    {manage && (
+                      <BulkCheckbox
+                        checked={selected.has(p.id)}
+                        onChange={() => toggle(p.id)}
+                        ariaLabel={`Select ${p.name} for bulk actions`}
+                      />
+                    )}
                     <button
                       type="button"
                       onClick={() => setViewing(p)}
@@ -139,10 +150,10 @@ export default function Projects() {
                 </div>
                 <p className="mt-1 text-sm text-ink/60">{p.location} · {p.clientName}</p>
                 <p className="mt-2 text-sm text-ink">
-                  {formatINR(spent)} / {formatINR(p.budget)}
+                  {formatINR(spent)} / {formatINR(p.budgetPaise)}
                 </p>
                 <div className="mt-1.5">
-                  <ProgressBar percent={p.budget > 0 ? (spent / p.budget) * 100 : 0} />
+                  <ProgressBar percent={p.budgetPaise > 0 ? (spent / p.budgetPaise) * 100 : 0} />
                 </div>
                 <p className="mt-2 text-xs text-ink/55">
                   {formatDate(p.startDate)} → {formatDate(p.endDate)} ·{' '}
@@ -150,6 +161,7 @@ export default function Projects() {
                 </p>
                 <div className="mt-3 flex items-center justify-between">
                   <SyncBadge entity="project" id={p.id} />
+                  {manage && (
                   <div className="flex gap-1">
                     <button
                       type="button"
@@ -168,6 +180,7 @@ export default function Projects() {
                       <Trash2 size={16} />
                     </button>
                   </div>
+                  )}
                 </div>
               </div>
             );
@@ -231,27 +244,37 @@ function ProjectForm({
   const [name, setName] = useState(project?.name ?? '');
   const [location, setLocation] = useState(project?.location ?? '');
   const [clientName, setClientName] = useState(project?.clientName ?? '');
-  const [budget, setBudget] = useState(project ? String(project.budget) : '');
+  const [budget, setBudget] = useState(project ? String(paiseToRupees(project.budgetPaise)) : '');
   const [startDate, setStartDate] = useState(project?.startDate ?? todayISO());
   const [endDate, setEndDate] = useState(project?.endDate ?? isoDaysFromNow(60));
   const [status, setStatus] = useState<ProjectStatus>(project?.status ?? 'in-progress');
+  const [type, setType] = useState<ProjectType>(project?.type ?? 'private');
+  const [plotArea, setPlotArea] = useState(project?.plotAreaSqm != null ? String(project.plotAreaSqm) : '');
+  const [height, setHeight] = useState(project?.buildingHeightM != null ? String(project.buildingHeightM) : '');
   const [error, setError] = useState('');
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    const b = Number(budget);
+    // Rupees in, paise stored — the conversion happens here, at the boundary.
+    const budgetPaise = parseRupeeInput(budget);
     if (!name.trim() || !location.trim() || !clientName.trim()) return setError('All fields are required.');
-    if (!Number.isFinite(b) || b <= 0) return setError('Budget must be greater than 0.');
+    if (budgetPaise === null || budgetPaise <= 0) return setError('Budget must be greater than 0.');
     if (startDate >= endDate) return setError('Start date must be before end date.');
     onSave({
       id: project?.id ?? uid('p'),
       name: name.trim(),
       location: location.trim(),
       clientName: clientName.trim(),
-      budget: b,
+      budgetPaise,
       startDate,
       endDate,
       status,
+      type,
+      // Government work follows CPWD; private work in this build follows
+      // Telangana. Other states are refused rather than defaulted.
+      jurisdiction: type === 'government' ? 'cpwd' : ('telangana' as Jurisdiction),
+      plotAreaSqm: plotArea.trim() === '' ? null : Number(plotArea),
+      buildingHeightM: height.trim() === '' ? null : Number(height),
     });
   };
 
@@ -272,6 +295,12 @@ function ProjectForm({
           <Field label="Total budget (₹)" htmlFor="pj-budget" required>
             <input id="pj-budget" type="number" min="1" className={inputCls} value={budget} onChange={(e) => setBudget(e.target.value)} required />
           </Field>
+          <Field label="Project type" htmlFor="pj-type">
+            <select id="pj-type" className={inputCls} value={type} onChange={(e) => setType(e.target.value as ProjectType)}>
+              <option value="private">Private</option>
+              <option value="government">Government</option>
+            </select>
+          </Field>
           <Field label="Status" htmlFor="pj-status">
             <select id="pj-status" className={inputCls} value={status} onChange={(e) => setStatus(e.target.value as ProjectStatus)}>
               <option value="in-progress">In progress</option>
@@ -285,6 +314,16 @@ function ProjectForm({
           <Field label="End date" htmlFor="pj-end" required>
             <input id="pj-end" type="date" className={inputCls} value={endDate} onChange={(e) => setEndDate(e.target.value)} required />
           </Field>
+          {type === 'private' && (
+            <>
+              <Field label="Plot area (m²)" htmlFor="pj-area">
+                <input id="pj-area" type="number" min="1" step="any" className={inputCls} value={plotArea} onChange={(e) => setPlotArea(e.target.value)} placeholder="decides the approval route" />
+              </Field>
+              <Field label="Building height (m)" htmlFor="pj-height">
+                <input id="pj-height" type="number" min="1" step="any" className={inputCls} value={height} onChange={(e) => setHeight(e.target.value)} />
+              </Field>
+            </>
+          )}
         </div>
         <div className="mt-4 flex justify-end gap-2">
           <button type="button" onClick={onClose} className="btn-ghost">
@@ -301,9 +340,13 @@ function ProjectForm({
 
 function ProjectDetail({ project, onClose }: { project: Project; onClose: () => void }) {
   const { state } = useApp();
+  const { can } = useAuth();
   const spent = projectSpend(project.id, state);
   const estimate = projectEstimate(project.id, state);
   const remaining = daysUntil(project.endDate);
+  // BOQ-value weighted, so cheap finished tasks cannot flatter the number.
+  const progress = projectProgress(project.id, state);
+  const seeMoney = can('budgeting:view', { projectId: project.id });
 
   const phases = useMemo(
     () =>
@@ -325,13 +368,15 @@ function ProjectDetail({ project, onClose }: { project: Project; onClose: () => 
         vendor: v,
         spend: state.invoices
           .filter((i) => i.projectId === project.id && i.vendorId === v.id)
-          .reduce((s, i) => s + i.amount, 0),
+          .reduce((s, i) => s + i.amountPaise, 0),
         outstanding: creditUsed(v.id, state.invoices.filter((i) => i.projectId === project.id)),
       }));
   }, [state, project.id]);
 
   return (
-    <Modal title={project.name} onClose={onClose}>
+    <Modal title={project.name} onClose={onClose} size="wide">
+      <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+      <div className="min-w-0">
       <p className="text-sm text-ink/60">
         {project.location} · {project.clientName}
       </p>
@@ -339,6 +384,21 @@ function ProjectDetail({ project, onClose }: { project: Project; onClose: () => 
         {formatDate(project.startDate)} → {formatDate(project.endDate)} ·{' '}
         {remaining >= 0 ? `${remaining} days remaining` : `${-remaining} days past end`}
       </p>
+
+      <div className="mt-4 rounded-xl bg-ink/[0.04] p-3">
+        <div className="flex items-baseline justify-between">
+          <span className="text-xs font-bold uppercase tracking-wide text-ink/55">Completion</span>
+          <span className="num text-sm font-bold text-ink">{progress.percentComplete.toFixed(0)}%</span>
+        </div>
+        <div className="mt-1.5">
+          <ProgressBar percent={progress.percentComplete} tone="bg-emerald-500" />
+        </div>
+        <p className="mt-1.5 text-[11px] text-ink/50">
+          Weighted by BOQ value, so an expensive unstarted line still counts.
+          {progress.unlinkedTaskCount > 0 &&
+            ` ${progress.unlinkedTaskCount} task${progress.unlinkedTaskCount === 1 ? '' : 's'} not linked to a BOQ line and excluded.`}
+        </p>
+      </div>
 
       <h3 className="mt-4 text-sm font-bold text-ink">Budget snapshot</h3>
       <div className="mt-1 grid grid-cols-3 gap-2 text-sm">
@@ -352,7 +412,7 @@ function ProjectDetail({ project, onClose }: { project: Project; onClose: () => 
         </div>
         <div className="rounded bg-paper-soft p-2">
           <p className="text-xs text-ink/55">Sanctioned</p>
-          <p className="font-semibold">{formatINR(project.budget)}</p>
+          <p className="font-semibold">{formatINR(project.budgetPaise)}</p>
         </div>
       </div>
 
@@ -371,21 +431,32 @@ function ProjectDetail({ project, onClose }: { project: Project; onClose: () => 
         ))}
       </div>
 
-      <h3 className="mt-4 text-sm font-bold text-ink">Vendors on this project</h3>
-      {vendorRows.length === 0 ? (
-        <p className="mt-1 text-sm text-ink/55">No invoices yet.</p>
-      ) : (
-        <ul className="mt-1 divide-y divide-ink/10 text-sm">
-          {vendorRows.map(({ vendor, spend, outstanding }) => (
-            <li key={vendor.id} className="flex justify-between py-1.5">
-              <span className="text-ink">{vendor.name}</span>
-              <span className="text-ink/60">
-                {formatINR(spend)} billed · {formatINR(outstanding)} open
-              </span>
-            </li>
-          ))}
-        </ul>
+      {seeMoney && (
+        <>
+          <h3 className="mt-4 text-sm font-bold text-ink">Vendors on this project</h3>
+          {vendorRows.length === 0 ? (
+            <p className="mt-1 text-sm text-ink/55">No invoices yet.</p>
+          ) : (
+            <ul className="mt-1 divide-y divide-ink/10 text-sm">
+              {vendorRows.map(({ vendor, spend, outstanding }) => (
+                <li key={vendor.id} className="flex justify-between py-1.5">
+                  <span className="text-ink">{vendor.name}</span>
+                  <span className="text-ink/60">
+                    {formatINR(spend)} billed · {formatINR(outstanding)} open
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
       )}
+      </div>
+
+      {/* Right column — the project's photo record, scrolling, tap to preview */}
+      <div className="min-w-0 border-t border-ink/10 pt-5 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
+        <PhotoGallery projectId={project.id} projectName={project.name} />
+      </div>
+      </div>
     </Modal>
   );
 }

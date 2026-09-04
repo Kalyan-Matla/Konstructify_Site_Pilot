@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Pencil, Phone, Plus, Star, Trash2, Users } from 'lucide-react';
 import type { PaymentTerms, Vendor, VendorCategory } from '../types';
 import { useApp } from '../contexts/AppContext';
+import { useAuth } from '../contexts/AuthContext';
 import {
   AICard,
   Badge,
@@ -29,7 +30,7 @@ import {
   type CreditHealth,
 } from '../utils/derive';
 import { suggestVendor } from '../utils/ai-suggestions';
-import { formatDate, formatINR, uid } from '../utils/format';
+import { formatDate, formatINR, paiseToRupees, parseRupeeInput, uid } from '../utils/format';
 import { useRouteAction } from '../hooks/useRouteAction';
 import { useBulkSelect } from '../hooks/useBulkSelect';
 import { useBulkDelete } from '../hooks/useBulkDelete';
@@ -53,6 +54,8 @@ export function healthBadge(health: CreditHealth, overdue: boolean) {
 
 export default function Vendors() {
   const { state, upsert, remove } = useApp();
+  const { can } = useAuth();
+  const manage = can('vendors:manage');
   const [category, setCategory] = useState<CategoryFilter>('all');
   const [health, setHealth] = useState<HealthFilter>('all');
   const [editing, setEditing] = useState<Vendor | 'new' | null>(null);
@@ -63,7 +66,7 @@ export default function Vendors() {
   const bulkDelete = useBulkDelete<Vendor>('vendor', 'vendor');
 
   useRouteAction({
-    openNew: () => setEditing('new'),
+    openNew: () => { if (manage) setEditing('new'); },
     openView: (id) => {
       const v = state.vendors.find((x) => x.id === id);
       if (v) setViewing(v);
@@ -82,13 +85,15 @@ export default function Vendors() {
         title="Vendors"
         subtitle={`${state.vendors.length} vendors · credit tracked in real time`}
         action={
-          <button
-            type="button"
-            onClick={() => setEditing('new')}
-            className="btn-primary flex items-center gap-1.5"
-          >
-            <Plus size={16} aria-hidden="true" /> Add vendor
-          </button>
+          manage ? (
+            <button
+              type="button"
+              onClick={() => setEditing('new')}
+              className="btn-primary flex items-center gap-1.5"
+            >
+              <Plus size={16} aria-hidden="true" /> Add vendor
+            </button>
+          ) : undefined
         }
       />
 
@@ -111,7 +116,7 @@ export default function Vendors() {
             <option value="maxed">&gt;95%</option>
           </select>
         </div>
-        {vendors.length > 0 && (
+        {manage && vendors.length > 0 && (
           <SelectAllToggle
             checked={vendors.every((v) => selected.has(v.id))}
             onChange={() =>
@@ -137,7 +142,7 @@ export default function Vendors() {
           icon={Users}
           title="No vendors here"
           message="Add a supplier with their credit line and payment terms to start tracking exposure."
-          action={{ label: 'Add vendor', onClick: () => setEditing('new') }}
+          action={manage ? { label: 'Add vendor', onClick: () => setEditing('new') } : undefined}
         />
       ) : (
         <div className="stagger grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -153,11 +158,13 @@ export default function Vendors() {
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex min-w-0 items-start gap-2">
-                    <BulkCheckbox
-                      checked={selected.has(v.id)}
-                      onChange={() => toggle(v.id)}
-                      ariaLabel={`Select ${v.name} for bulk actions`}
-                    />
+                    {manage && (
+                      <BulkCheckbox
+                        checked={selected.has(v.id)}
+                        onChange={() => toggle(v.id)}
+                        ariaLabel={`Select ${v.name} for bulk actions`}
+                      />
+                    )}
                     <button
                       type="button"
                       onClick={() => setViewing(v)}
@@ -173,7 +180,7 @@ export default function Vendors() {
                   <div className="flex justify-between text-sm">
                     <span className="text-ink/60">Credit used</span>
                     <span className="font-semibold text-ink">
-                      {formatINR(used)} / {formatINR(v.creditLimit)}
+                      {formatINR(used)} / {formatINR(v.creditLimitPaise)}
                     </span>
                   </div>
                   <ProgressBar percent={pct} />
@@ -188,22 +195,26 @@ export default function Vendors() {
                     >
                       <Phone size={16} />
                     </a>
-                    <button
-                      type="button"
-                      onClick={() => setEditing(v)}
-                      aria-label={`Edit ${v.name}`}
-                      className="rounded p-1.5 text-ink/55 hover:bg-paper-soft hover:text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                    >
-                      <Pencil size={16} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDeleting(v)}
-                      aria-label={`Delete ${v.name}`}
-                      className="rounded p-1.5 text-ink/55 hover:bg-paper-soft hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                    {manage && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setEditing(v)}
+                          aria-label={`Edit ${v.name}`}
+                          className="rounded p-1.5 text-ink/55 hover:bg-paper-soft hover:text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        >
+                          <Pencil size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeleting(v)}
+                          aria-label={`Delete ${v.name}`}
+                          className="rounded p-1.5 text-ink/55 hover:bg-paper-soft hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -272,16 +283,16 @@ function VendorForm({
   const [gstId, setGstId] = useState(vendor?.gstId ?? '');
   const [bankAccount, setBankAccount] = useState(vendor?.bankAccount ?? '');
   const [bankIfsc, setBankIfsc] = useState(vendor?.bankIfsc ?? '');
-  const [creditLimit, setCreditLimit] = useState(vendor ? String(vendor.creditLimit) : '');
+  const [creditLimit, setCreditLimit] = useState(vendor ? String(paiseToRupees(vendor.creditLimitPaise)) : '');
   const [paymentTerms, setPaymentTerms] = useState<PaymentTerms>(vendor?.paymentTerms ?? '14-day');
   const [error, setError] = useState('');
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    const limit = Number(creditLimit);
+    const creditLimitPaise = parseRupeeInput(creditLimit);
     if (!name.trim()) return setError('Vendor name is required.');
     if (!/^\d{10}$/.test(phone)) return setError('Phone must be a 10-digit number.');
-    if (!Number.isFinite(limit) || limit <= 0) return setError('Credit limit must be greater than 0.');
+    if (creditLimitPaise === null || creditLimitPaise <= 0) return setError('Credit limit must be greater than 0.');
     if (gstId && !/^[0-9]{2}[A-Z0-9]{13}$/.test(gstId)) return setError('GST ID must be 15 characters (e.g. 27AABCT1234H1Z0).');
     onSave({
       id: vendor?.id ?? uid('v'),
@@ -292,7 +303,7 @@ function VendorForm({
       gstId: gstId.trim(),
       bankAccount: bankAccount.trim(),
       bankIfsc: bankIfsc.trim(),
-      creditLimit: limit,
+      creditLimitPaise,
       paymentTerms,
       ratingQuality: vendor?.ratingQuality ?? 4.0,
       ratingDelivery: vendor?.ratingDelivery ?? 4.0,
@@ -357,6 +368,7 @@ function VendorForm({
 
 function VendorDetail({ vendor, onClose }: { vendor: Vendor; onClose: () => void }) {
   const { state } = useApp();
+  const { can } = useAuth();
   const navigate = useNavigate();
   const [aiDismissed, setAiDismissed] = useState(false);
 
@@ -394,7 +406,7 @@ function VendorDetail({ vendor, onClose }: { vendor: Vendor; onClose: () => void
         <div className="flex justify-between text-sm">
           <span className="text-ink/60">Credit used ({pct.toFixed(0)}%)</span>
           <span className="font-semibold text-ink">
-            {formatINR(used)} / {formatINR(vendor.creditLimit)}
+            {formatINR(used)} / {formatINR(vendor.creditLimitPaise)}
           </span>
         </div>
         <div className="mt-1.5">
@@ -423,20 +435,24 @@ function VendorDetail({ vendor, onClose }: { vendor: Vendor; onClose: () => void
       )}
 
       <div className="mt-4 flex gap-2">
-        <button
-          type="button"
-          onClick={() => navigate('/payments')}
-          className="btn-primary flex-1"
-        >
-          Schedule payment
-        </button>
-        <button
-          type="button"
-          onClick={() => navigate('/credits')}
-          className="btn-ghost flex-1"
-        >
-          Credit dashboard
-        </button>
+        {can('payments:execute') && (
+          <button
+            type="button"
+            onClick={() => navigate('/payments')}
+            className="btn-primary flex-1"
+          >
+            Schedule payment
+          </button>
+        )}
+        {can('credits:view') && (
+          <button
+            type="button"
+            onClick={() => navigate('/credits')}
+            className="btn-ghost flex-1"
+          >
+            Credit dashboard
+          </button>
+        )}
       </div>
 
       <h3 className="mt-4 text-sm font-bold text-ink">Invoice history (last 10)</h3>
@@ -447,7 +463,7 @@ function VendorDetail({ vendor, onClose }: { vendor: Vendor; onClose: () => void
               {i.invoiceNumber} · {formatDate(i.invoiceDate)}
             </span>
             <span className="flex items-center gap-2">
-              <span className="font-medium text-ink">{formatINR(i.amount)}</span>
+              <span className="font-medium text-ink">{formatINR(i.amountPaise)}</span>
               {i.status === 'paid' ? (
                 <Badge tone="green">paid</Badge>
               ) : i.status === 'payment-sent' ? (

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Printer, Star, TrendingDown, TrendingUp } from 'lucide-react';
 import clsx from 'clsx';
 import { useApp } from '../contexts/AppContext';
+import { useAuth } from '../contexts/AuthContext';
 import { Badge, PageHeader, ProgressBar, Ring } from '../components/ui';
 import { useCountUp } from '../hooks/useFx';
 import {
@@ -10,18 +11,30 @@ import {
   projectEstimate,
   projectSpend,
 } from '../utils/derive';
-import { daysSince, daysUntil, formatINR } from '../utils/format';
+import { daysSince, daysUntil, formatINR, lineEstimatePaise, rupees } from '../utils/format';
 
 type Tab = 'projects' | 'vendors' | 'cashflow';
 
 export default function Reports() {
+  const { can } = useAuth();
+  // Vendor performance and cashPaise flow are vendor-side money. A landlord holds
+  // reports:view for progress on their own build — never their contractor's
+  // supplier ledger — so those tabs require the vendor-money pair.
+  const money = can('vendors:view') && can('payments:view');
   const [tab, setTab] = useState<Tab>('projects');
+  const tabs: Array<[Tab, string]> = money
+    ? [
+        ['projects', 'Project summary'],
+        ['vendors', 'Vendor performance'],
+        ['cashflow', 'Cash flow (30-day)'],
+      ]
+    : [['projects', 'Project summary']];
 
   return (
     <div>
       <PageHeader
         title="Reports"
-        subtitle="Project health, vendor scorecards, cash flow"
+        subtitle="Project health, vendor scorecards, cashPaise flow"
         action={
           <button
             type="button"
@@ -34,13 +47,7 @@ export default function Reports() {
       />
 
       <div className="no-print mb-5 flex flex-wrap gap-2" role="tablist" aria-label="Report type">
-        {(
-          [
-            ['projects', 'Project summary'],
-            ['vendors', 'Vendor performance'],
-            ['cashflow', 'Cash flow (30-day)'],
-          ] as const
-        ).map(([key, label]) => (
+        {tabs.map(([key, label]) => (
           <button
             key={key}
             type="button"
@@ -55,20 +62,22 @@ export default function Reports() {
       </div>
 
       {tab === 'projects' && <ProjectSummary />}
-      {tab === 'vendors' && <VendorPerformance />}
-      {tab === 'cashflow' && <CashFlow />}
+      {money && tab === 'vendors' && <VendorPerformance />}
+      {money && tab === 'cashflow' && <CashFlow />}
     </div>
   );
 }
 
 function ProjectSummary() {
   const { state } = useApp();
+  const { can, canReachProject } = useAuth();
+  const money = can('vendors:view') && can('payments:view');
   return (
     <div className="stagger space-y-4">
-      {state.projects.map((p) => {
+      {state.projects.filter((p) => canReachProject(p.id)).map((p) => {
         const spent = projectSpend(p.id, state);
         const estimate = projectEstimate(p.id, state);
-        const budgetPct = p.budget > 0 ? (spent / p.budget) * 100 : 0;
+        const budgetPct = p.budgetPaise > 0 ? (spent / p.budgetPaise) * 100 : 0;
         const elapsed = Math.max(daysSince(p.startDate), 0);
         const total = elapsed + Math.max(daysUntil(p.endDate), 0);
         const timePct = total > 0 ? (elapsed / total) * 100 : 0;
@@ -81,16 +90,16 @@ function ProjectSummary() {
             vendor: v,
             spend: state.invoices
               .filter((i) => i.projectId === p.id && i.vendorId === v.id)
-              .reduce((s, i) => s + i.amount, 0),
+              .reduce((s, i) => s + i.amountPaise, 0),
           }))
           .filter((x) => x.spend > 0)
           .sort((a, b) => b.spend - a.spend)
           .slice(0, 3);
         const maxVendorSpend = vendorSpend[0]?.spend ?? 1;
-        const overrunItems = state.budgetItems.filter((b) => {
+        const overrunItems = !money ? [] : state.budgetItems.filter((b) => {
           if (b.projectId !== p.id) return false;
-          const est = b.quantity * b.unitRate;
-          return est > 0 && b.actualSpend - est > 0.1 * est;
+          const est = lineEstimatePaise(b.quantity, b.unitRatePaise);
+          return est > 0 && b.actualSpendPaise - est > 0.1 * est;
         });
         const scheduleRisk = timePct > completion + 15;
         return (
@@ -112,11 +121,20 @@ function ProjectSummary() {
               <div>
                 {/* Twin progress meters */}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <Meter label="Budget used" pct={budgetPct} detail={`${formatINR(spent)} of ${formatINR(p.budget)}`} />
-                  <Meter label="Timeline elapsed" pct={timePct} detail={`BOQ estimate ${formatINR(estimate)}`} tone="bg-sky-500" />
+                  {money && (
+                    <Meter label="Budget used" pct={budgetPct} detail={`${formatINR(spent)} of ${formatINR(p.budgetPaise)}`} />
+                  )}
+                  <Meter
+                    label="Timeline elapsed"
+                    pct={timePct}
+                    detail={money ? `BOQ estimate ${formatINR(estimate)}` : `${Math.max(daysUntil(p.endDate), 0)} days remaining`}
+                    tone="bg-sky-500"
+                  />
                 </div>
 
-                {/* Top vendors — mini bar chart */}
+                {/* Top vendors — mini bar chart (vendor-side money) */}
+                {money && (
+                  <>
                 <h3 className="mt-5 text-[11px] font-bold uppercase tracking-wider text-ink/60">Top vendors</h3>
                 {vendorSpend.length === 0 ? (
                   <p className="mt-1 text-sm text-ink/60">No spend yet.</p>
@@ -137,6 +155,9 @@ function ProjectSummary() {
                   </ul>
                 )}
 
+                  </>
+                )}
+
                 {/* Risks */}
                 <h3 className="mt-5 text-[11px] font-bold uppercase tracking-wider text-ink/60">Key risks</h3>
                 {overrunItems.length === 0 && !scheduleRisk ? (
@@ -146,11 +167,11 @@ function ProjectSummary() {
                 ) : (
                   <ul className="mt-1.5 space-y-1.5 text-sm">
                     {overrunItems.map((b) => {
-                      const est = b.quantity * b.unitRate;
+                      const est = lineEstimatePaise(b.quantity, b.unitRatePaise);
                       return (
                         <li key={b.id} className="flex items-center gap-1.5 font-semibold text-red-700">
                           <TrendingDown size={15} aria-hidden="true" />
-                          {b.description} +{formatINR(b.actualSpend - est)} over estimate
+                          {b.description} +{formatINR(b.actualSpendPaise - est)} over estimate
                         </li>
                       );
                     })}
@@ -193,18 +214,22 @@ function Meter({ label, pct, detail, tone }: { label: string; pct: number; detai
 
 function VendorPerformance() {
   const { state } = useApp();
+  const { canReachProject } = useAuth();
   const rows = useMemo(
     () =>
       state.vendors.map((v) => {
-        const invoices = state.invoices.filter((i) => i.vendorId === v.id);
+        // Layer 3 — spend and punctuality computed over reachable projects only.
+        const invoices = state.invoices.filter(
+          (i) => i.vendorId === v.id && canReachProject(i.projectId),
+        );
         const paid = invoices.filter((i) => i.status === 'paid');
         const onTime = paid.filter((i) => i.paymentDate !== null && i.paymentDate <= i.dueDate);
-        const totalSpend = invoices.reduce((s, i) => s + i.amount, 0);
+        const totalSpend = invoices.reduce((s, i) => s + i.amountPaise, 0);
         const usage = creditUsagePercent(v, state.invoices) * 100;
         const overall = (v.ratingQuality + v.ratingDelivery) / 2;
         return { vendor: v, invoices, paid, onTime, totalSpend, usage, overall };
       }),
-    [state],
+    [state, canReachProject],
   );
   const best = [...rows].sort((a, b) => b.overall - a.overall)[0];
   const biggest = [...rows].sort((a, b) => b.totalSpend - a.totalSpend)[0];
@@ -294,12 +319,14 @@ function Highlight({ label, value, detail }: { label: string; value: string; det
 
 function CashFlow() {
   const { state } = useApp();
+  const { canReachProject } = useAuth();
   const weeks = useMemo(() => {
     const out: Array<{ label: string; total: number; parts: string[] }> = [];
     for (let w = 0; w < 4; w++) {
       const from = w * 7;
       const to = from + 7;
       const due = state.invoices.filter((i) => {
+        if (!canReachProject(i.projectId)) return false; // layer 3
         if (i.status !== 'unpaid') return false;
         const d = daysUntil(i.dueDate);
         return w === 0 ? d < to : d >= from && d < to;
@@ -307,23 +334,23 @@ function CashFlow() {
       const byVendor = new Map<string, number>();
       for (const i of due) {
         const name = state.vendors.find((v) => v.id === i.vendorId)?.name ?? 'Unknown';
-        byVendor.set(name, (byVendor.get(name) ?? 0) + i.amount);
+        byVendor.set(name, (byVendor.get(name) ?? 0) + i.amountPaise);
       }
       out.push({
         label: `Week ${w + 1}`,
-        total: due.reduce((s, i) => s + i.amount, 0),
+        total: due.reduce((s, i) => s + i.amountPaise, 0),
         parts: [...byVendor.entries()].map(([n, a]) => `${n} ${formatINR(a)}`),
       });
     }
     return out;
-  }, [state]);
+  }, [state, canReachProject]);
 
   const totalDue = weeks.reduce((s, w) => s + w.total, 0);
   const maxWeek = Math.max(...weeks.map((w) => w.total), 1);
-  const cash = 20_00_000;
+  const cashPaise = rupees(20_00_000);
   const overrunPrediction = state.budgetItems.reduce((s, b) => {
-    const est = b.quantity * b.unitRate;
-    const variance = b.actualSpend - est;
+    const est = lineEstimatePaise(b.quantity, b.unitRatePaise);
+    const variance = b.actualSpendPaise - est;
     return est > 0 && variance > 0.1 * est ? s + variance * 2.5 : s;
   }, 0);
   const totalUsed = state.vendors.reduce((s, v) => s + creditUsed(v.id, state.invoices), 0);
@@ -333,9 +360,9 @@ function CashFlow() {
     <div className="animate-fade-up space-y-4">
       {/* Headline metrics */}
       <div className="stagger grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <MetricTile label="Payables (30 days)" value={formatINR(Math.round(animatedDue))} warn={totalDue > cash} />
-        <MetricTile label="Cash on hand" value={formatINR(cash)} />
-        <MetricTile label="Cash after payables" value={formatINR(cash - totalDue)} warn={cash - totalDue < 0} />
+        <MetricTile label="Payables (30 days)" value={formatINR(Math.round(animatedDue))} warn={totalDue > cashPaise} />
+        <MetricTile label="Cash on hand" value={formatINR(cashPaise)} />
+        <MetricTile label="Cash after payables" value={formatINR(cashPaise - totalDue)} warn={cashPaise - totalDue < 0} />
         <MetricTile
           label="Predicted overrun"
           value={overrunPrediction > 0 ? `+${formatINR(overrunPrediction)}` : '—'}
@@ -356,7 +383,7 @@ function CashFlow() {
               <div
                 className={clsx(
                   'w-full max-w-[72px] origin-bottom animate-bar-grow rounded-t-xl',
-                  w.total > cash
+                  w.total > cashPaise
                     ? 'bg-gradient-to-t from-red-600 to-red-400'
                     : 'bg-gradient-to-t from-ink to-ink-600',
                 )}

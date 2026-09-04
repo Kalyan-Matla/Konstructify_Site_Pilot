@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { CheckCircle2, ClipboardList, Pencil, Plus, Trash2 } from 'lucide-react';
 import type { Priority, TaskStatus, WorkOrder } from '../types';
 import { useApp } from '../contexts/AppContext';
+import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import {
   Badge,
@@ -24,9 +25,24 @@ import { useBulkDelete } from '../hooks/useBulkDelete';
 
 type Filter = 'all' | TaskStatus | 'overdue';
 
+/** Next sequential order number, derived from the highest existing suffix —
+ *  not the array length, which collides once any order has been deleted
+ *  (e.g. WO-001..WO-005, delete WO-003, length is 4 → length+1 would
+ *  re-mint the still-existing WO-005). */
+function nextOrderNumber(orders: WorkOrder[]): string {
+  const max = orders.reduce((m, w) => {
+    const n = Number(w.orderNumber.replace(/^WO-/, ''));
+    return Number.isFinite(n) && n > m ? n : m;
+  }, 0);
+  return `WO-${String(max + 1).padStart(3, '0')}`;
+}
+
 export default function WorkOrders() {
   const { state, upsert, remove } = useApp();
+  const { can, canReachProject } = useAuth();
   const { toast } = useToast();
+  const manage = can('work-orders:manage');
+  const mayUpdate = can('work-orders:update');
   const [filter, setFilter] = useState<Filter>('all');
   const [editing, setEditing] = useState<WorkOrder | 'new' | null>(null);
   const [deleting, setDeleting] = useState<WorkOrder | null>(null);
@@ -34,9 +50,10 @@ export default function WorkOrders() {
   const { selected, toggle, clear, setAll } = useBulkSelect();
   const bulkDelete = useBulkDelete<WorkOrder>('workOrder', 'work order');
 
-  useRouteAction({ openNew: () => setEditing('new') });
+  useRouteAction({ openNew: () => { if (manage) setEditing('new'); } });
 
   const orders = state.workOrders.filter((w) => {
+    if (!canReachProject(w.projectId)) return false; // layer 3
     if (filter === 'all') return true;
     if (filter === 'overdue') return w.status !== 'complete' && daysUntil(w.dueDate) < 0;
     return w.status === filter;
@@ -62,13 +79,15 @@ export default function WorkOrders() {
         title="Work Orders"
         subtitle="Create, assign and track handoffs"
         action={
-          <button
-            type="button"
-            onClick={() => setEditing('new')}
-            className="btn-primary flex items-center gap-1.5"
-          >
-            <Plus size={16} aria-hidden="true" /> New work order
-          </button>
+          manage ? (
+            <button
+              type="button"
+              onClick={() => setEditing('new')}
+              className="btn-primary flex items-center gap-1.5"
+            >
+              <Plus size={16} aria-hidden="true" /> New work order
+            </button>
+          ) : undefined
         }
       />
 
@@ -88,7 +107,7 @@ export default function WorkOrders() {
             </button>
           ))}
         </div>
-        {orders.length > 0 && (
+        {(manage || mayUpdate) && orders.length > 0 && (
           <SelectAllToggle
             checked={orders.every((w) => selected.has(w.id))}
             onChange={() => setAll(orders.every((w) => selected.has(w.id)) ? [] : orders.map((w) => w.id))}
@@ -98,16 +117,20 @@ export default function WorkOrders() {
       </div>
 
       <BulkBar count={selected.size} itemLabel="work order" onClear={clear}>
-        <button type="button" onClick={bulkMarkComplete} className="btn-success btn-sm flex items-center gap-1.5">
-          <CheckCircle2 size={14} aria-hidden="true" /> Mark complete
-        </button>
-        <button
-          type="button"
-          onClick={() => setBulkDeleting(true)}
-          className="flex items-center gap-1.5 rounded-xl bg-red-600 px-3 py-1.5 text-xs font-bold text-white transition-[transform,background-color] duration-200 ease-out hover:bg-red-500 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
-        >
-          <Trash2 size={14} aria-hidden="true" /> Delete
-        </button>
+        {mayUpdate && (
+          <button type="button" onClick={bulkMarkComplete} className="btn-success btn-sm flex items-center gap-1.5">
+            <CheckCircle2 size={14} aria-hidden="true" /> Mark complete
+          </button>
+        )}
+        {manage && (
+          <button
+            type="button"
+            onClick={() => setBulkDeleting(true)}
+            className="flex items-center gap-1.5 rounded-xl bg-red-600 px-3 py-1.5 text-xs font-bold text-white transition-[transform,background-color] duration-200 ease-out hover:bg-red-500 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+          >
+            <Trash2 size={14} aria-hidden="true" /> Delete
+          </button>
+        )}
       </BulkBar>
 
       {orders.length === 0 ? (
@@ -115,7 +138,7 @@ export default function WorkOrders() {
           icon={ClipboardList}
           title="No work orders"
           message="Create a work order to assign a task, set its priority and track the handoff to completion."
-          action={{ label: 'New work order', onClick: () => setEditing('new') }}
+          action={manage ? { label: 'New work order', onClick: () => setEditing('new') } : undefined}
         />
       ) : (
         <div className="stagger space-y-2">
@@ -129,11 +152,13 @@ export default function WorkOrders() {
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex min-w-0 items-start gap-2">
-                    <BulkCheckbox
-                      checked={selected.has(w.id)}
-                      onChange={() => toggle(w.id)}
-                      ariaLabel={`Select ${w.orderNumber} for bulk actions`}
-                    />
+                    {(manage || mayUpdate) && (
+                      <BulkCheckbox
+                        checked={selected.has(w.id)}
+                        onChange={() => toggle(w.id)}
+                        ariaLabel={`Select ${w.orderNumber} for bulk actions`}
+                      />
+                    )}
                     <div className="min-w-0">
                       <p className="font-semibold text-ink">
                         {w.orderNumber} · {w.taskName}
@@ -161,7 +186,7 @@ export default function WorkOrders() {
                   <SyncBadge entity="workOrder" id={w.id} />
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {w.status !== 'complete' && (
+                  {mayUpdate && w.status !== 'complete' && (
                     <button
                       type="button"
                       onClick={() => markComplete(w)}
@@ -170,21 +195,25 @@ export default function WorkOrders() {
                       <CheckCircle2 size={14} aria-hidden="true" /> Mark complete
                     </button>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => setEditing(w)}
-                    className="btn-ghost btn-sm flex items-center gap-1"
-                  >
-                    <Pencil size={14} aria-hidden="true" /> Edit / reassign
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDeleting(w)}
-                    aria-label={`Delete ${w.orderNumber}`}
-                    className="btn-ghost btn-sm flex items-center gap-1 hover:text-red-600"
-                  >
-                    <Trash2 size={14} aria-hidden="true" /> Delete
-                  </button>
+                  {manage && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setEditing(w)}
+                        className="btn-ghost btn-sm flex items-center gap-1"
+                      >
+                        <Pencil size={14} aria-hidden="true" /> Edit / reassign
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeleting(w)}
+                        aria-label={`Delete ${w.orderNumber}`}
+                        className="btn-ghost btn-sm flex items-center gap-1 hover:text-red-600"
+                      >
+                        <Trash2 size={14} aria-hidden="true" /> Delete
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             );
@@ -243,11 +272,13 @@ function WorkOrderForm({
   onSave: (w: WorkOrder) => void;
 }) {
   const { state } = useApp();
+  const { canReachProject } = useAuth();
+  const projects = state.projects.filter((p) => canReachProject(p.id));
   const [taskName, setTaskName] = useState(order?.taskName ?? '');
   const [description, setDescription] = useState(order?.description ?? '');
   const [assignee, setAssignee] = useState(order?.assignee ?? '');
   const [priority, setPriority] = useState<Priority>(order?.priority ?? 'Medium');
-  const [projectId, setProjectId] = useState(order?.projectId ?? state.projects[0]?.id ?? '');
+  const [projectId, setProjectId] = useState(order?.projectId ?? projects[0]?.id ?? '');
   const [dueDate, setDueDate] = useState(order?.dueDate ?? isoDaysFromNow(7));
   const [status, setStatus] = useState<TaskStatus>(order?.status ?? 'pending');
   const [error, setError] = useState('');
@@ -257,7 +288,7 @@ function WorkOrderForm({
     if (!taskName.trim() || !assignee.trim()) return setError('Task name and assignee are required.');
     onSave({
       id: order?.id ?? uid('w'),
-      orderNumber: order?.orderNumber ?? `WO-${String(state.workOrders.length + 1).padStart(3, '0')}`,
+      orderNumber: order?.orderNumber ?? nextOrderNumber(state.workOrders),
       projectId,
       taskName: taskName.trim(),
       description: description.trim(),
@@ -291,7 +322,7 @@ function WorkOrderForm({
           </Field>
           <Field label="Project" htmlFor="wo-project">
             <select id="wo-project" className={inputCls} value={projectId} onChange={(e) => setProjectId(e.target.value)}>
-              {state.projects.map((p) => (
+              {projects.map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>

@@ -16,5 +16,7 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  "//": "Tests never ship, and Bun transpiles them directly — keeping them out of the app build avoids needing bun types in the production typecheck. Run them with: bun test",
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
 }

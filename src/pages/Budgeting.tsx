@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { IndianRupee, Pencil, Plus, Trash2 } from 'lucide-react';
 import type { BudgetItem } from '../types';
 import { useApp } from '../contexts/AppContext';
+import { useAuth } from '../contexts/AuthContext';
 import {
   AICard,
   Badge,
@@ -17,7 +18,7 @@ import {
   inputCls,
 } from '../components/ui';
 import { suggestBudget } from '../utils/ai-suggestions';
-import { formatINR, uid } from '../utils/format';
+import { formatINR, lineEstimatePaise, parseRupeeInput, paiseToRupees, uid } from '../utils/format';
 import { useRouteAction } from '../hooks/useRouteAction';
 import { useBulkSelect } from '../hooks/useBulkSelect';
 import { useBulkDelete } from '../hooks/useBulkDelete';
@@ -26,7 +27,11 @@ const UNITS = ['LS', 'm³', 'sqft', 'MT', 'bags', 'pcs', 'days'];
 
 export default function Budgeting() {
   const { state, upsert, remove } = useApp();
-  const [projectId, setProjectId] = useState(state.projects[0]?.id ?? '');
+  const { can, canReachProject } = useAuth();
+  const manage = can('budgeting:manage');
+  // Layer 3 — only assigned projects are selectable or visible here.
+  const reachableProjects = state.projects.filter((p) => canReachProject(p.id));
+  const [projectId, setProjectId] = useState(reachableProjects[0]?.id ?? '');
   const [editing, setEditing] = useState<BudgetItem | 'new' | null>(null);
   const [deleting, setDeleting] = useState<BudgetItem | null>(null);
   const [bulkDeleting, setBulkDeleting] = useState(false);
@@ -34,12 +39,12 @@ export default function Budgeting() {
   const { selected, toggle, clear, setAll } = useBulkSelect();
   const bulkDelete = useBulkDelete<BudgetItem>('budgetItem', 'BOQ item');
 
-  useRouteAction({ openNew: () => setEditing('new') });
+  useRouteAction({ openNew: () => { if (manage) setEditing('new'); } });
 
   const project = state.projects.find((p) => p.id === projectId);
   const items = state.budgetItems.filter((b) => b.projectId === projectId);
-  const totalEstimate = items.reduce((s, b) => s + b.quantity * b.unitRate, 0);
-  const totalActual = items.reduce((s, b) => s + b.actualSpend, 0);
+  const totalEstimate = items.reduce((s, b) => s + lineEstimatePaise(b.quantity, b.unitRatePaise), 0);
+  const totalActual = items.reduce((s, b) => s + b.actualSpendPaise, 0);
   const totalVariance = totalActual - totalEstimate;
   const ai = suggestBudget(projectId, state.budgetItems);
 
@@ -49,13 +54,15 @@ export default function Budgeting() {
         title="Budgeting"
         subtitle="BOQ estimates vs. actual spend"
         action={
-          <button
-            type="button"
-            onClick={() => setEditing('new')}
-            className="btn-primary flex items-center gap-1.5"
-          >
-            <Plus size={16} aria-hidden="true" /> New BOQ item
-          </button>
+          manage ? (
+            <button
+              type="button"
+              onClick={() => setEditing('new')}
+              className="btn-primary flex items-center gap-1.5"
+            >
+              <Plus size={16} aria-hidden="true" /> New BOQ item
+            </button>
+          ) : undefined
         }
       />
 
@@ -70,7 +77,7 @@ export default function Budgeting() {
             clear();
           }}
         >
-          {state.projects.map((p) => (
+          {reachableProjects.map((p) => (
             <option key={p.id} value={p.id}>{p.name}</option>
           ))}
         </select>
@@ -90,13 +97,15 @@ export default function Budgeting() {
       {ai && !aiDismissed && <AICard suggestion={ai} onDismiss={() => setAiDismissed(true)} />}
 
       <BulkBar count={selected.size} itemLabel="BOQ item" onClear={clear}>
-        <button
-          type="button"
-          onClick={() => setBulkDeleting(true)}
-          className="flex items-center gap-1.5 rounded-xl bg-red-600 px-3 py-1.5 text-xs font-bold text-white transition-[transform,background-color] duration-200 ease-out hover:bg-red-500 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
-        >
-          <Trash2 size={14} aria-hidden="true" /> Delete
-        </button>
+        {manage && (
+          <button
+            type="button"
+            onClick={() => setBulkDeleting(true)}
+            className="flex items-center gap-1.5 rounded-xl bg-red-600 px-3 py-1.5 text-xs font-bold text-white transition-[transform,background-color] duration-200 ease-out hover:bg-red-500 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+          >
+            <Trash2 size={14} aria-hidden="true" /> Delete
+          </button>
+        )}
       </BulkBar>
 
       {items.length === 0 ? (
@@ -104,7 +113,7 @@ export default function Budgeting() {
           icon={IndianRupee}
           title="No BOQ items yet"
           message={`Add a bill-of-quantities line for ${project?.name ?? 'this project'} to track estimate against actual spend.`}
-          action={{ label: 'New BOQ item', onClick: () => setEditing('new') }}
+          action={manage ? { label: 'New BOQ item', onClick: () => setEditing('new') } : undefined}
         />
       ) : (
         <div className="overflow-x-auto panel">
@@ -112,6 +121,7 @@ export default function Budgeting() {
             <thead>
               <tr className="border-b border-ink/10 bg-paper-soft text-left text-[11px] font-bold uppercase tracking-wider text-ink/60">
                 <th scope="col" className="w-10 px-4 py-2.5">
+                  {manage && (
                   <BulkCheckbox
                     checked={items.length > 0 && items.every((b) => selected.has(b.id))}
                     onChange={() =>
@@ -119,6 +129,7 @@ export default function Budgeting() {
                     }
                     ariaLabel="Select all BOQ items"
                   />
+                  )}
                 </th>
                 <th scope="col" className="px-4 py-2.5">Item</th>
                 <th scope="col" className="px-4 py-2.5 text-right">Qty</th>
@@ -131,8 +142,8 @@ export default function Budgeting() {
             </thead>
             <tbody>
               {items.map((b) => {
-                const estimate = b.quantity * b.unitRate;
-                const variance = b.actualSpend - estimate;
+                const estimate = lineEstimatePaise(b.quantity, b.unitRatePaise);
+                const variance = b.actualSpendPaise - estimate;
                 const pct = estimate > 0 ? (variance / estimate) * 100 : 0;
                 const overrun = estimate > 0 && variance > 0.1 * estimate;
                 return (
@@ -141,22 +152,24 @@ export default function Budgeting() {
                     className={`border-b border-ink/10 transition-colors last:border-0 hover:bg-paper-soft ${selected.has(b.id) ? 'bg-amber-50' : ''}`}
                   >
                     <td className="px-4 py-2.5">
-                      <BulkCheckbox
-                        checked={selected.has(b.id)}
-                        onChange={() => toggle(b.id)}
-                        ariaLabel={`Select ${b.description} for bulk actions`}
-                      />
+                      {manage && (
+                        <BulkCheckbox
+                          checked={selected.has(b.id)}
+                          onChange={() => toggle(b.id)}
+                          ariaLabel={`Select ${b.description} for bulk actions`}
+                        />
+                      )}
                     </td>
                     <td className="px-4 py-2.5">
                       <p className="font-medium text-ink">{b.description}</p>
                       <SyncBadge entity="budgetItem" id={b.id} />
                     </td>
                     <td className="num px-4 py-2.5 text-right text-ink/60">{b.quantity} {b.unit}</td>
-                    <td className="num px-4 py-2.5 text-right text-ink/60">₹{b.unitRate.toLocaleString('en-IN')}</td>
+                    <td className="num px-4 py-2.5 text-right text-ink/60">{formatINR(b.unitRatePaise)}</td>
                     <td className="num px-4 py-2.5 text-right text-ink">{formatINR(estimate)}</td>
-                    <td className="num px-4 py-2.5 text-right text-ink">{formatINR(b.actualSpend)}</td>
+                    <td className="num px-4 py-2.5 text-right text-ink">{formatINR(b.actualSpendPaise)}</td>
                     <td className="px-4 py-2.5 text-right">
-                      {b.actualSpend === 0 ? (
+                      {b.actualSpendPaise === 0 ? (
                         <Badge tone="gray">not started</Badge>
                       ) : overrun ? (
                         <Badge tone="red">+{pct.toFixed(0)}% overrun</Badge>
@@ -167,6 +180,7 @@ export default function Budgeting() {
                       )}
                     </td>
                     <td className="px-4 py-2.5 text-right">
+                      {manage && (
                       <div className="flex gap-1">
                         <button type="button" onClick={() => setEditing(b)} aria-label={`Edit ${b.description}`} className="rounded p-1.5 text-ink/55 hover:bg-paper-soft hover:text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
                           <Pencil size={15} />
@@ -175,6 +189,7 @@ export default function Budgeting() {
                           <Trash2 size={15} />
                         </button>
                       </div>
+                      )}
                     </td>
                   </tr>
                 );
@@ -249,25 +264,25 @@ function BudgetForm({
   const [description, setDescription] = useState(item?.description ?? '');
   const [quantity, setQuantity] = useState(item ? String(item.quantity) : '1');
   const [unit, setUnit] = useState(item?.unit ?? 'LS');
-  const [unitRate, setUnitRate] = useState(item ? String(item.unitRate) : '');
-  const [actualSpend, setActualSpend] = useState(item ? String(item.actualSpend) : '0');
+  const [unitRate, setUnitRate] = useState(item ? String(paiseToRupees(item.unitRatePaise)) : '');
+  const [actualSpend, setActualSpend] = useState(item ? String(paiseToRupees(item.actualSpendPaise)) : '0');
   const [error, setError] = useState('');
 
-  const qty = Number(quantity) || 0;
-  const rate = Number(unitRate) || 0;
+  const qty = Number(quantity) || 0;            // measured decimal, not money
+  const ratePaise = parseRupeeInput(unitRate) ?? 0;
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!description.trim()) return setError('Description is required.');
-    if (qty <= 0 || rate <= 0) return setError('Quantity and rate must be greater than 0.');
+    if (qty <= 0 || ratePaise <= 0) return setError('Quantity and rate must be greater than 0.');
     onSave({
       id: item?.id ?? uid('b'),
       projectId: item?.projectId ?? projectId,
       description: description.trim(),
       quantity: qty,
       unit,
-      unitRate: rate,
-      actualSpend: Math.max(Number(actualSpend) || 0, 0),
+      unitRatePaise: ratePaise,
+      actualSpendPaise: Math.max(parseRupeeInput(actualSpend) ?? 0, 0),
     });
   };
 
@@ -297,7 +312,7 @@ function BudgetForm({
           </Field>
         </div>
         <p className="mb-2 text-sm text-ink/60">
-          Total estimate: <strong>{formatINR(qty * rate)}</strong>
+          Total estimate: <strong>{formatINR(lineEstimatePaise(qty, ratePaise))}</strong>
         </p>
         <div className="mt-2 flex justify-end gap-2">
           <button type="button" onClick={onClose} className="btn-ghost">

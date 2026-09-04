@@ -17,11 +17,15 @@ import { suggestPayment, suggestVendor } from '../utils/ai-suggestions';
 import { daysUntil, formatINR } from '../utils/format';
 
 export default function Credits() {
+  // Deliberately account-level, not project-scoped: a vendor's credit limit
+  // and exposure are properties of the vendor relationship, and splitting
+  // them by project would show a number that is simply false. The route is
+  // gated on credits:view, which only account-wide money roles hold.
   const { state } = useApp();
   const navigate = useNavigate();
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
-  const totalLimit = state.vendors.reduce((s, v) => s + v.creditLimit, 0);
+  const totalLimit = state.vendors.reduce((s, v) => s + v.creditLimitPaise, 0);
   const totalUsed = state.vendors.reduce((s, v) => s + creditUsed(v.id, state.invoices), 0);
 
   const paymentAI = suggestPayment(state.invoices, state.vendors);
@@ -126,7 +130,7 @@ export default function Credits() {
               </div>
               {nextDue && (
                 <p className="mt-3 flex items-center gap-2 text-xs text-ink/60">
-                  Next due: <span className="num font-bold text-ink">{nextDue.invoiceNumber} ({formatINR(nextDue.amount)})</span>
+                  Next due: <span className="num font-bold text-ink">{nextDue.invoiceNumber} ({formatINR(nextDue.amountPaise)})</span>
                   {daysUntil(nextDue.dueDate) < 0 ? (
                     <Badge tone="red">{-daysUntil(nextDue.dueDate)}d overdue</Badge>
                   ) : (

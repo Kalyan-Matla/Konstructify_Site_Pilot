@@ -1,16 +1,16 @@
 import type { AISuggestion, AppState, BudgetItem, Invoice, Vendor, WorkTask } from '../types';
 import { creditAvailable, creditUsagePercent } from './derive';
-import { daysSince, daysUntil, formatINR } from './format';
+import { daysSince, daysUntil, formatINR, lineEstimatePaise } from './format';
 
 /** Rule: BOQ line item variance > 10% of estimate → budget alert. */
 export function suggestBudget(projectId: string, items: BudgetItem[]): AISuggestion | null {
   const overruns = items
     .filter((b) => b.projectId === projectId)
-    .map((b) => ({ item: b, estimate: b.quantity * b.unitRate }))
-    .filter(({ item, estimate }) => estimate > 0 && item.actualSpend - estimate > 0.1 * estimate);
+    .map((b) => ({ item: b, estimate: lineEstimatePaise(b.quantity, b.unitRatePaise) }))
+    .filter(({ item, estimate }) => estimate > 0 && item.actualSpendPaise - estimate > 0.1 * estimate);
   if (overruns.length === 0) return null;
   const { item, estimate } = overruns[0];
-  const variance = item.actualSpend - estimate;
+  const variance = item.actualSpendPaise - estimate;
   const pct = ((variance / estimate) * 100).toFixed(0);
   return {
     id: `ai-budget-${item.id}`,
@@ -54,15 +54,14 @@ export function suggestPayment(invoices: Invoice[], vendors: Vendor[]): AISugges
   return {
     id: `ai-payment-${soon.id}`,
     title: 'Payment Opportunity',
-    message: `${vendor.name} invoice ${soon.invoiceNumber} (${formatINR(soon.amount)}) is due ${d === 0 ? 'today' : `in ${d} day${d === 1 ? '' : 's'}`}.`,
-    suggestion: `Pay ${formatINR(soon.amount)} now via NEFT to free up ${formatINR(soon.amount)} of ${vendor.name}'s credit.`,
+    message: `${vendor.name} invoice ${soon.invoiceNumber} (${formatINR(soon.amountPaise)}) is due ${d === 0 ? 'today' : `in ${d} day${d === 1 ? '' : 's'}`}.`,
+    suggestion: `Pay ${formatINR(soon.amountPaise)} now via NEFT to free up ${formatINR(soon.amountPaise)} of ${vendor.name}'s credit.`,
     action: 'Schedule payment',
   };
 }
 
 /** Rule: photo count drives a mock completion estimate and delay prediction. */
-export function suggestWorkStatus(task: WorkTask): AISuggestion | null {
-  const photoCount = task.photos.length;
+export function suggestWorkStatus(task: WorkTask, photoCount: number): AISuggestion | null {
   if (photoCount === 0 || task.status === 'complete') return null;
   const estimatedPercent = Math.min(photoCount * 10, 90);
   const daysUsed = Math.max(daysSince(task.createdAt), 1);
